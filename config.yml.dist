@@ -1,0 +1,14 @@
+database:
+    driver: pdo_mysql
+    host: localhost
+    user: root
+    password: ''
+    dbname: scrutinizer_workflow
+
+# This can be set to "test", or any other value. We require a special environment for running
+# unit tests just to make sure that tests are not mistakenly run on a production deployment
+# as we delete the database in tests.
+env: prod
+
+rabbitmq:
+    dsn: guest:guest@localhost:5672/
