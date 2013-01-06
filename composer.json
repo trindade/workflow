@@ -18,7 +18,8 @@
         "symfony/console": "2.*",
         "symfony/yaml": "2.*",
         "scrutinizer/rabbitmq": "dev-master",
-        "monolog/monolog": "1.2.*"
+        "monolog/monolog": "1.2.*",
+        "phpcollection/phpcollection": "0.2.*@dev"
     },
 
     "require-dev": {
