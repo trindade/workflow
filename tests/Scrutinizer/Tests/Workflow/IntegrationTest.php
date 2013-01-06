@@ -28,7 +28,6 @@ use JMS\Serializer\SerializerBuilder;
 use PhpAmqpLib\Connection\AMQPConnection;
 use Scrutinizer\RabbitMQ\Rpc\RpcClient;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
-use Scrutinizer\Workflow\Client\ExecutionScheduler;
 use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Scrutinizer\Workflow\Model\ActivityType;
