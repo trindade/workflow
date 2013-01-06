@@ -25,6 +25,13 @@ use PhpOption\None;
 use PhpOption\Option;
 use PhpOption\Some;
 
+/**
+ * @ORM\Entity
+ * @ORM\Table(name = "workflow_executions")
+ * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
+ *
+ * @Serializer\ExclusionPolicy("ALL")
+ */
 class WorkflowExecution
 {
     const STATE_OPEN = 'open';
@@ -52,7 +59,7 @@ class WorkflowExecution
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
     private $maxRuntime;
 
-    /** @ORM\Column(type = "text") */
+    /** @ORM\Column(type = "text") @Serializer\Expose */
     private $input;
 
     /** @ORM\Column(type = "string", length = 15) */
@@ -84,7 +91,6 @@ class WorkflowExecution
      * @ORM\OrderBy({"id" = "ASC"})
      *
      * @Serializer\Expose
-     * @Serializer\Groups({"decider"})
      */
     private $tasks;
 
@@ -99,7 +105,6 @@ class WorkflowExecution
      * @ORM\OrderBy({"id" = "ASC"})
      *
      * @Serializer\Expose
-     * @Serializer\Groups({"decider"})
      */
     private $history;
 

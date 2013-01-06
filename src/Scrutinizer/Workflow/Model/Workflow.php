@@ -20,12 +20,17 @@ namespace Scrutinizer\Workflow\Model;
 
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity
+ * @ORM\Table(name = "workflows")
+ * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
+ */
 class Workflow
 {
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) @ORM\Id @ORM\GeneratedValue(strategy = "AUTO") */
     private $id;
 
-    /** @ORM\Column(type = "string") */
+    /** @ORM\Column(type = "string", unique = true) */
     private $name;
 
     /** @ORM\Column(type = "string", length = 30) */
@@ -33,6 +38,13 @@ class Workflow
 
     public function __construct($name, $deciderQueueName)
     {
+        if (empty($name)) {
+            throw new \InvalidArgumentException('$name cannot be empty.');
+        }
+        if (empty($deciderQueueName)) {
+            throw new \InvalidArgumentException('$deciderQueueName cannot be empty.');
+        }
+
         $this->name = $name;
 
         if ( ! preg_match('/^[a-z_\.]+$/', $deciderQueueName)) {

@@ -20,6 +20,11 @@ namespace Scrutinizer\Workflow\Model;
 
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity(repositoryClass = "Scrutinizer\Workflow\Model\Repository\TagRepository")
+ * @ORM\Table(name = "workflow_tags")
+ * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
+ */
 class Tag
 {
     /** @ORM\Id @ORM\GeneratedValue(strategy = "AUTO") @ORM\Column(type = "integer", options = {"unsigned": true}) */

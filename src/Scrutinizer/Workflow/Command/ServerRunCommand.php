@@ -22,7 +22,7 @@ use JMS\Serializer\SerializerBuilder;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
 use Scrutinizer\Workflow\Logger\FanoutLogger;
 use Scrutinizer\Workflow\Logger\OutputLogger;
-use Scrutinizer\Workflow\RabbitMq\WorkflowServer;
+use Scrutinizer\Workflow\RabbitMq\WorkflowServerWorker;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -38,8 +38,6 @@ class ServerRunCommand extends AbstractCommand
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $output->writeln('Running Workflow Server');
-
         $logger = $this->getLogger();
         if ($input->getOption('verbose')) {
             $logger = new FanoutLogger(array(
@@ -48,7 +46,7 @@ class ServerRunCommand extends AbstractCommand
             ));
         }
 
-        $server = new WorkflowServer($this->getAmqpConnection(), $this->registry, SerializerBuilder::create()->build(), $logger);
+        $server = new WorkflowServerWorker($this->getAmqpConnection(), $this->registry, SerializerBuilder::create()->build(), $logger);
         $server->run();
     }
 }

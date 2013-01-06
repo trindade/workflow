@@ -29,6 +29,7 @@ use PhpAmqpLib\Connection\AMQPConnection;
 use Scrutinizer\RabbitMQ\Rpc\RpcClient;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
 use Scrutinizer\Workflow\Client\ExecutionScheduler;
+use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Scrutinizer\Workflow\Model\ActivityType;
 use Scrutinizer\Workflow\Model\Workflow;
@@ -40,8 +41,8 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
     /** @var AMQPConnection */
     private $amqpCon;
 
-    /** @var ExecutionScheduler */
-    private $executionScheduler;
+    /** @var WorkflowClient */
+    private $client;
 
     /** @var ManagerRegistry */
     private $registry;
@@ -63,7 +64,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
 
         $executions = array();
         for ($i=1;$i<=10;$i++) {
-            $rs = $this->executionScheduler->startExecution('testflow', json_encode(array('foo' => 'bar', 'i' => $i)), array('foo', 'bar'));
+            $rs = $this->client->startExecution('testflow', json_encode(array('foo' => 'bar', 'i' => $i)), array('foo', 'bar'));
             $this->assertEquals(array('execution_id' => $i), $rs);
             $this->assertNotNull($executions[] = $this->executionRepo->findOneBy(array('id' => $i)));
         }
@@ -89,7 +90,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
 
         $executions = array();
         for ($i=1; $i<=10; $i++) {
-            $rs = $this->executionScheduler->startExecution('testflow', 'foo');
+            $rs = $this->client->startExecution('testflow', 'foo');
             $this->assertEquals(array('execution_id' => $i), $rs);
 
             /** @var $execution WorkflowExecution */
@@ -125,7 +126,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->startServer();
         $this->startServer();
 
-        $rs = $this->executionScheduler->startExecution('testflow', 'foo');
+        $rs = $this->client->startExecution('testflow', 'foo');
         $this->assertEquals(array('execution_id' => 1), $rs);
 
         /** @var $execution WorkflowExecution */
@@ -164,10 +165,12 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->purgeQueue('workflow_execution');
         $this->purgeQueue('workflow_decision');
         $this->purgeQueue('workflow_activity_result');
+        $this->purgeQueue('workflow_type');
+        $this->purgeQueue('workflow_activity_type');
 
         $this->channel = $this->amqpCon->channel();
         $this->serializer = SerializerBuilder::create()->build();
-        $this->executionScheduler = new ExecutionScheduler(new RpcClient($this->amqpCon, $this->serializer));
+        $this->client = new WorkflowClient(new RpcClient($this->amqpCon, $this->serializer));
 
         $this->registry = new SimpleRegistry($_SERVER['CONFIG']);
         $this->executionRepo = $this->registry->getRepository('Workflow:WorkflowExecution');
@@ -181,13 +184,9 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->em->getConnection()->exec('SET foreign_key_checks = 1');
 
         // Create some test workflow
-        $workflow = new Workflow('testflow', 'test_deciderqueue');
-        $activityA = new ActivityType('doA', 'test_activity_doA');
-        $activityB = new ActivityType('doB', 'test_activity_doB');
-        $this->em->persist($workflow);
-        $this->em->persist($activityA);
-        $this->em->persist($activityB);
-        $this->em->flush();
+        $this->client->declareWorkflowType('testflow', 'test_deciderqueue');
+        $this->client->declareActivityType('doA', 'test_activity_doA');
+        $this->client->declareActivityType('doB', 'test_activity_doB');
 
         $this->purgeQueue('test_deciderqueue');
         $this->purgeQueue('test_activity_doA');

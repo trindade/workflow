@@ -21,6 +21,9 @@ namespace Scrutinizer\Workflow\Model;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 
+/**
+ * @ORM\Entity
+ */
 class ActivityTask extends AbstractTask
 {
     const STATE_OPEN = 'open';

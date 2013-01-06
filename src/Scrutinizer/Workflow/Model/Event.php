@@ -20,6 +20,11 @@ namespace Scrutinizer\Workflow\Model;
 
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * @ORM\Entity
+ * @ORM\Table(name = "workflow_events")
+ * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
+ */
 class Event
 {
     /** @ORM\Id @ORM\GeneratedValue(strategy = "AUTO") @ORM\Column(type = "bigint", options = {"unsigned": true}) */

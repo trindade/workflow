@@ -37,12 +37,14 @@ use Scrutinizer\Workflow\Model\Tag;
 use Scrutinizer\Workflow\Model\Workflow;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\ActivityResult;
+use Scrutinizer\Workflow\RabbitMq\Transport\CreateActivityType;
+use Scrutinizer\Workflow\RabbitMq\Transport\CreateWorkflowType;
 use Scrutinizer\Workflow\RabbitMq\Transport\Decision;
 use Scrutinizer\Workflow\RabbitMq\Transport\DecisionResponse;
 use Scrutinizer\Workflow\RabbitMq\Transport\LoggingMessage;
 use Scrutinizer\Workflow\RabbitMq\Transport\StartWorkflowExecution;
 
-class WorkflowServer
+class WorkflowServerWorker
 {
     private $con;
     private $channel;
@@ -61,10 +63,14 @@ class WorkflowServer
         $this->channel->queue_declare('workflow_execution', false, true, false, false);
         $this->channel->queue_declare('workflow_decision', false,  true, false, false);
         $this->channel->queue_declare('workflow_activity_result', false,  true, false, false);
+        $this->channel->queue_declare('workflow_type', false,  true, false, false);
+        $this->channel->queue_declare('workflow_activity_type', false,  true, false, false);
 
         $this->channel->basic_consume('workflow_execution', '', false, false, false, false, array($this, 'consumeExecution'));
         $this->channel->basic_consume('workflow_decision', '',  false, false, false, false, array($this, 'consumeDecision'));
         $this->channel->basic_consume('workflow_activity_result', '',  false, false, false, false, array($this, 'consumeActivityResult'));
+        $this->channel->basic_consume('workflow_type', '',  false, false, false, false, array($this, 'consumeWorkflowType'));
+        $this->channel->basic_consume('workflow_activity_type', '',  false, false, false, false, array($this, 'consumeActivityType'));
 
         $this->channel->exchange_declare('workflow_log', 'topic');
         list($queueName,) = $this->channel->queue_declare('', false, false, true);
@@ -106,6 +112,66 @@ class WorkflowServer
         }
 
         $em->clear();
+    }
+
+    public function consumeWorkflowType(AMQPMessage $message)
+    {
+        /** @var $createWorkflow CreateWorkflowType */
+        $createWorkflow = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\CreateWorkflowType');
+
+        /** @var $em EntityManager */
+        $em = $this->registry->getManager();
+
+        try {
+            /** @var $workflow Workflow */
+            $workflow = $em->getRepository('Workflow:Workflow')->findOneBy(array('name' => $createWorkflow->name));
+            if (null === $workflow) {
+                $workflow = new Workflow($createWorkflow->name, $createWorkflow->deciderQueueName);
+                $em->persist($workflow);
+                $em->flush($workflow);
+            } else {
+                if ($workflow->getDeciderQueueName() !== $createWorkflow->deciderQueueName) {
+                    throw new \RuntimeException(sprintf('The workflow "%s" is already declared with the decider queue "%s".', $workflow->getDeciderQueueName()));
+                }
+            }
+
+            $em->clear();
+
+            $this->sendResponseIfRequested($message);
+            $this->channel->basic_ack($message->get('delivery_tag'));
+        } catch (\Exception $ex) {
+            $this->handleError($message, $ex);
+        }
+    }
+
+    public function consumeActivityType(AMQPMessage $message)
+    {
+        /** @var $createActivityType CreateActivityType */
+        $createActivityType = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\CreateActivityType');
+
+        /** @var $em EntityManager */
+        $em = $this->registry->getManager();
+
+        try {
+            /** @var $activityType ActivityType */
+            $activityType = $em->getRepository('Workflow:ActivityType')->findOneBy(array('name' => $createActivityType->name));
+            if (null === $activityType) {
+                $activityType = new ActivityType($createActivityType->name, $createActivityType->queueName);
+                $em->persist($activityType);
+                $em->flush($activityType);
+            } else {
+                if ($activityType->getQueueName() !== $createActivityType->queueName) {
+                    throw new \RuntimeException(sprintf('The workflow "%s" is already declared with the queue "%s".', $activityType->getQueueName()));
+                }
+            }
+
+            $em->clear();
+
+            $this->sendResponseIfRequested($message);
+            $this->channel->basic_ack($message->get('delivery_tag'));
+        } catch (\Exception $ex) {
+            $this->handleError($message, $ex);
+        }
     }
 
     public function consumeExecution(AMQPMessage $message)
@@ -433,6 +499,13 @@ class WorkflowServer
         $this->serializer->setExclusionStrategy(empty($groups) ? null : new GroupsExclusionStrategy($groups));
 
         return $this->serializer->serialize($data, 'json');
+    }
+
+    private function deserialize($data, $type)
+    {
+        $this->serializer->setExclusionStrategy(null);
+
+        return $this->serializer->deserialize($data, $type, 'json');
     }
 
     private function dispatchEvent(WorkflowExecution $execution, $name, array $attributes = array())

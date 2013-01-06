@@ -21,6 +21,17 @@ namespace Scrutinizer\Workflow\Model;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation as Serializer;
 
+/**
+ * @ORM\Entity
+ * @ORM\Table(name = "workflow_tasks")
+ * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
+ * @ORM\InheritanceType("SINGLE_TABLE")
+ * @ORM\DiscriminatorColumn(name="type", type="string", length = 30)
+ * @ORM\DiscriminatorMap({
+ *     "activity": "ActivityTask",
+ *     "decision": "DecisionTask"
+ * })
+ */
 abstract class AbstractTask
 {
     /** @ORM\Id @ORM\GeneratedValue(strategy = "AUTO") @ORM\Column(type = "bigint", options = {"unsigned": true}) */
