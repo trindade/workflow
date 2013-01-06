@@ -73,23 +73,23 @@
         },
         {
             "name": "doctrine/dbal",
-            "version": "2.3.1",
+            "version": "2.3.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/dbal",
-                "reference": "2.3.1"
+                "reference": "2.3.2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/doctrine/dbal/archive/2.3.1.zip",
-                "reference": "2.3.1",
+                "url": "https://github.com/doctrine/dbal/archive/2.3.2.zip",
+                "reference": "2.3.2",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.2",
                 "doctrine/common": "2.3.*"
             },
-            "time": "2012-12-04 21:06:56",
+            "time": "2013-01-07 20:03:43",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -192,16 +192,16 @@
         },
         {
             "name": "doctrine/orm",
-            "version": "2.3.1",
+            "version": "2.3.2",
             "source": {
                 "type": "git",
                 "url": "git://github.com/doctrine/doctrine2.git",
-                "reference": "2.3.1"
+                "reference": "2.3.2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/doctrine/doctrine2/archive/2.3.1.zip",
-                "reference": "2.3.1",
+                "url": "https://github.com/doctrine/doctrine2/archive/2.3.2.zip",
+                "reference": "2.3.2",
                 "shasum": ""
             },
             "require": {
@@ -213,7 +213,7 @@
             "suggest": {
                 "symfony/yaml": "If you want to use YAML Metadata Mapping Driver"
             },
-            "time": "2012-12-04 22:04:25",
+            "time": "2013-01-07 20:05:04",
             "bin": [
                 "bin/doctrine",
                 "bin/doctrine.php"
@@ -822,7 +822,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "294e48b1035a4f4187f51f71612cdbcab8ea37c3"
+                "reference": "fac2a1890b069faca04078f149ea1dd3e74ce0cb"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -830,7 +830,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-06 13:07:59",
+            "time": "2013-01-08 12:54:27",
             "type": "library",
             "installation-source": "source",
             "autoload": {

@@ -45,11 +45,16 @@ class DecisionTask extends AbstractTask
 
     public function isClosed()
     {
-        return ! $this->isOpen();
+        return $this->state === self::STATE_CLOSED;
     }
 
     public function getType()
     {
         return 'decision';
+    }
+
+    public function __toString()
+    {
+        return sprintf('DecisionTask(id = %d, state = %s)', $this->getId(), $this->state);
     }
 }

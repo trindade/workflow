@@ -25,6 +25,7 @@ class Decision
     const TYPE_EXECUTION_FAILED = 'execution_failed';
     const TYPE_EXECUTION_SUCCEEDED = 'execution_succeeded';
     const TYPE_SCHEDULE_ACTIVITY = 'schedule_activity';
+    const TYPE_SCHEDULE_CHILD_WORKFLOW = 'schedule_child_workflow';
 
     /** @Serializer\Type("string") */
     public $type;
@@ -32,7 +33,7 @@ class Decision
     /** @Serializer\Type("array") */
     public $attributes = array();
 
-    public function getControlData()
+    public function getControl()
     {
         return isset($this->attributes['control']) ? $this->attributes['control'] : array();
     }

@@ -24,7 +24,7 @@ use JMS\Serializer\Annotation as Serializer;
 /**
  * @ORM\Entity
  */
-class ActivityTask extends AbstractTask
+class ActivityTask extends AbstractActivityTask
 {
     const STATE_OPEN = 'open';
     const STATE_FAILED = 'failed';
@@ -35,9 +35,6 @@ class ActivityTask extends AbstractTask
 
     /** @ORM\Column(type = "text") */
     private $input;
-
-    /** @ORM\Column(type = "json_array") */
-    private $controlData = array();
 
     /** @ORM\Column(type = "text", nullable = true) */
     private $result;
@@ -55,14 +52,13 @@ class ActivityTask extends AbstractTask
      * @param WorkflowExecution $execution
      * @param ActivityType $activityType
      * @param string $input
-     * @param array $controlData
+     * @param array $control
      */
-    public function __construct(WorkflowExecution $execution, ActivityType $activityType, $input, array $controlData = array())
+    public function __construct(WorkflowExecution $execution, ActivityType $activityType, $input, array $control = array())
     {
-        parent::__construct($execution);
+        parent::__construct($execution, $control);
 
         $this->activityType = $activityType;
-        $this->controlData = $controlData;
         $this->input = $input;
     }
 
@@ -78,11 +74,6 @@ class ActivityTask extends AbstractTask
     public function getActivityName()
     {
         return $this->activityType->getName();
-    }
-
-    public function getControlData()
-    {
-        return $this->controlData;
     }
 
     public function getInput()
@@ -128,5 +119,10 @@ class ActivityTask extends AbstractTask
         $this->state = self::STATE_SUCCEEDED;
         $this->setFinished();
         $this->result = $result;
+    }
+
+    public function __toString()
+    {
+        return sprintf('ActivityTask(id = %d, state = %s)', $this->getId(), $this->state);
     }
 }

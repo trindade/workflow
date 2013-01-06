@@ -29,7 +29,8 @@ use JMS\Serializer\Annotation as Serializer;
  * @ORM\DiscriminatorColumn(name="type", type="string", length = 30)
  * @ORM\DiscriminatorMap({
  *     "activity": "ActivityTask",
- *     "decision": "DecisionTask"
+ *     "decision": "DecisionTask",
+ *     "workflow_execution": "WorkflowExecutionTask",
  * })
  */
 abstract class AbstractTask
@@ -86,4 +87,5 @@ abstract class AbstractTask
 
     abstract public function isOpen();
     abstract public function isClosed();
+    abstract public function __toString();
 }

@@ -33,4 +33,12 @@ class StartWorkflowExecution
 
     /** @Serializer\Type("array<string>") */
     public $tags = array();
+
+    public function __construct($workflowName, $input, $maxRuntime = 3600, array $tags = array())
+    {
+        $this->workflow = $workflowName;
+        $this->input = $input;
+        $this->maxRuntime = $maxRuntime;
+        $this->tags = $tags;
+    }
 }

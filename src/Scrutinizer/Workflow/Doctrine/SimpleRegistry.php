@@ -19,12 +19,14 @@
 namespace Scrutinizer\Workflow\Doctrine;
 
 use Doctrine\Common\Annotations\AnnotationReader;
+use Doctrine\Common\EventManager;
 use Doctrine\Common\Persistence\AbstractManagerRegistry;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
 use Doctrine\ORM\ORMException;
+use Scrutinizer\Workflow\Model\Listener\EventDispatchingListener;
 
 class SimpleRegistry extends AbstractManagerRegistry
 {
@@ -52,8 +54,12 @@ class SimpleRegistry extends AbstractManagerRegistry
         }
 
         switch ($name) {
+            case 'default_event_manager':
+                $service = new EventManager();
+                break;
+
             case 'default_connection':
-                $service = DriverManager::getConnection($this->config['database']);
+                $service = DriverManager::getConnection($this->config['database'], null, $this->getService('default_event_manager'));
                 break;
 
             case 'default_manager':
@@ -65,7 +71,8 @@ class SimpleRegistry extends AbstractManagerRegistry
                 $cfg->setAutoGenerateProxyClasses(true);
                 $cfg->setProxyNamespace('Scrutinizer\Workflow\Proxies');
                 $cfg->addEntityNamespace('Workflow', 'Scrutinizer\Workflow\Model');
-                $service = EntityManager::create($this->getConnection(), $cfg);
+
+                $service = EntityManager::create($this->getConnection(), $cfg, $this->getService('default_event_manager'));
                 break;
 
             default:

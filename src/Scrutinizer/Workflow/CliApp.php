@@ -46,6 +46,8 @@ class CliApp extends Application
         $this->registry = new SimpleRegistry($this->config);
 
         parent::__construct('scrutinizer-workflow', '0.1');
+
+        $this->getHelperSet()->set(new EntityManagerHelper($this->registry->getManager()));
     }
 
     protected function getDefaultCommands()
@@ -78,6 +80,22 @@ class CliApp extends Application
             if ($command instanceof AbstractCommand) {
                 $command->setMigrationConfiguration($migrationConfig);
             }
+        }
+
+        // Add Doctrine commands
+        $pathPrefixLength = strlen(realpath(__DIR__.'/../../../vendor/doctrine/orm/lib/Doctrine/ORM/Tools/Console/Command')) + 1;
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(__DIR__.'/../../../vendor/doctrine/orm/lib/Doctrine/ORM/Tools/Console/Command')) as $file) {
+            if ( ! $file->isFile()) {
+                continue;
+            }
+
+            $className = 'Doctrine\ORM\Tools\Console\Command\\'.str_replace(DIRECTORY_SEPARATOR, '\\', substr($file->getRealPath(), $pathPrefixLength, -4));
+            $ref = new \ReflectionClass($className);
+            if ($ref->isAbstract()) {
+                continue;
+            }
+
+            $commands[] = $command = $ref->newInstance();
         }
 
         foreach ($commands as $command) {

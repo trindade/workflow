@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+declare(ticks = 1);
+
 namespace Scrutinizer\Tests\Workflow;
 
 use Doctrine\Common\DataFixtures\Purger\ORMPurger;
@@ -30,8 +32,6 @@ use Scrutinizer\RabbitMQ\Rpc\RpcClient;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
 use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
-use Scrutinizer\Workflow\Model\ActivityType;
-use Scrutinizer\Workflow\Model\Workflow;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 use Symfony\Component\Process\Process;
 
@@ -115,6 +115,9 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @group concurrency
+     */
     public function testHighlyConcurrentEnvironment()
     {
         $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
@@ -142,6 +145,42 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertGreaterThan(65, count($execution->getTasks()), $this->getDebugInfo());
     }
 
+    /**
+     * @group child-workflow
+     */
+    public function testChildWorkflow()
+    {
+        $this->client->declareWorkflowType('parent_flow', 'parent_flow_decider');
+        $this->client->declareWorkflowType('child_flow', 'child_flow_decider');
+        $this->purgeQueue('parent_flow_decider');
+        $this->purgeQueue('child_flow_decider');
+
+        $this->startServer();
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
+
+        $this->startProcess('php Fixture/parent_workflow_decider.php parent_flow_decider');
+        $this->startProcess('php Fixture/parent_workflow_decider.php parent_flow_decider');
+        $this->startProcess('php Fixture/sequential_decider.php child_flow_decider');
+        $this->startProcess('php Fixture/sequential_decider.php child_flow_decider');
+
+        $rs = $this->client->startExecution('parent_flow', 'test');
+        $this->assertEquals(array('execution_id' => 1), $rs, $this->getDebugInfo());
+        $this->assertNotNull($execution = $this->executionRepo->findOneBy(array('id' => $rs['execution_id'])), $this->getDebugInfo());
+
+        $this->assertTrueWithin(15, function() use ($execution) {
+            $this->em->refresh($execution);
+
+            return $execution->isClosed();
+        });
+
+        $this->assertCount(3, $executions = $this->executionRepo->findAll(), $this->getDebugInfo());
+        $this->assertTrue($executions[0]->hasSucceeded(), $this->getDebugInfo());
+        $this->assertTrue($executions[1]->hasSucceeded(), $this->getDebugInfo());
+        $this->assertTrue($executions[2]->hasSucceeded(), $this->getDebugInfo());
+    }
+
     public static function setUpBeforeClass()
     {
         $em = (new SimpleRegistry($_SERVER['CONFIG']))->getManager();
@@ -158,14 +197,16 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
-        $this->startServer();
-
         $this->amqpCon = DsnUtils::createCon($_SERVER['CONFIG']['rabbitmq']['dsn']);
         $this->purgeQueue('workflow_execution');
         $this->purgeQueue('workflow_decision');
         $this->purgeQueue('workflow_activity_result');
         $this->purgeQueue('workflow_type');
         $this->purgeQueue('workflow_activity_type');
+
+        $this->startServer();
+        usleep(5E5);
+        $this->assertTrue($this->processes[0]->isRunning(), 'Server failed to start.'."\n\n".$this->getDebugInfo());
 
         $this->channel = $this->amqpCon->channel();
         $this->serializer = SerializerBuilder::create()->build();
@@ -190,6 +231,11 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->purgeQueue('test_deciderqueue');
         $this->purgeQueue('test_activity_doA');
         $this->purgeQueue('test_activity_doB');
+
+        pcntl_signal(SIGINT, function() {
+            echo $this->getDebugInfo();
+            exit;
+        });
     }
 
     protected function tearDown()
@@ -206,7 +252,9 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
             $proc->stop(5);
         }
 
-        $this->amqpCon->close();
+        if (null !== $this->amqpCon) {
+            $this->amqpCon->close();
+        }
 
         if ( ! empty($prematureExists)) {
             throw new \InvalidArgumentException('These programs exited prematurely: '.implode(', ', $prematureExists)."\n\n".$this->getDebugInfo());

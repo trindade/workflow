@@ -9,12 +9,19 @@ $serializer = \JMS\Serializer\SerializerBuilder::create()
         $registry->registerSubscribingHandler(new \Scrutinizer\Workflow\Client\Serializer\TaskHandler());
     })
     ->build();
+
 $decider = new \Scrutinizer\Workflow\Client\Decider\SimpleCallableDecider(
     $amqpCon,
     $serializer,
-    'test_deciderqueue',
+    $_SERVER['argv'][1],
     new \Scrutinizer\RabbitMQ\Rpc\RpcClient($amqpCon, $serializer),
     function (\Scrutinizer\Workflow\Client\Transport\WorkflowExecution $execution, \Scrutinizer\Workflow\Client\Decider\DecisionsBuilder $decisionsBuilder) {
+        if (count($execution->tasks) < 5) {
+            $decisionsBuilder->scheduleActivity('doA', 'foo');
+
+            return;
+        }
+
         $decisionsBuilder->succeedExecution();
     }
 );

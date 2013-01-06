@@ -29,6 +29,9 @@ class ActivityResult
     public $taskId;
 
     /** @Serializer\Type("string") */
+    public $executionId;
+
+    /** @Serializer\Type("string") */
     public $status;
 
     /** @Serializer\Type("string") */

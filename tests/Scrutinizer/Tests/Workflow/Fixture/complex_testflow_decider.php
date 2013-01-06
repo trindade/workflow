@@ -9,7 +9,7 @@ $serializer = \JMS\Serializer\SerializerBuilder::create()
         $registry->registerSubscribingHandler(new \Scrutinizer\Workflow\Client\Serializer\TaskHandler());
     })
     ->build();
-$decider = new \Scrutinizer\Workflow\Client\Decider\CallbackDecider(
+$decider = new \Scrutinizer\Workflow\Client\Decider\SimpleCallableDecider(
     $amqpCon,
     $serializer,
     'test_deciderqueue',

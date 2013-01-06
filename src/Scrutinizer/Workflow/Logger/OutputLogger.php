@@ -19,6 +19,7 @@
 namespace Scrutinizer\Workflow\Logger;
 
 use Psr\Log\AbstractLogger;
+use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class OutputLogger extends AbstractLogger
@@ -38,5 +39,10 @@ class OutputLogger extends AbstractLogger
         }
 
         $this->output->writeln(strtr($message, $map));
+
+        if (isset($context['exception']) && $context['exception'] instanceof \Exception) {
+            // Not sure what the render method does on Application, it should be its own class ideally...
+            (new Application())->renderException($context['exception'], $this->output);
+        }
     }
 }

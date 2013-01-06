@@ -23,7 +23,7 @@ use Scrutinizer\Workflow\Model\Tag;
 
 class TagRepository extends EntityRepository
 {
-    public function getOrCreateTags(array $names)
+    public function getOrCreate(array $names)
     {
         $resolvedTags = array();
         foreach ($names as $name) {

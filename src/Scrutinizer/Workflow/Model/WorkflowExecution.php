@@ -26,7 +26,7 @@ use PhpOption\Option;
 use PhpOption\Some;
 
 /**
- * @ORM\Entity
+ * @ORM\Entity(repositoryClass = "Scrutinizer\Workflow\Model\Repository\WorkflowExecutionRepository")
  * @ORM\Table(name = "workflow_executions")
  * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
  *
@@ -56,13 +56,19 @@ class WorkflowExecution
     /** @ORM\ManyToOne(targetEntity = "Workflow") */
     private $workflow;
 
+    /**
+     * @ORM\OneToOne(targetEntity = "WorkflowExecutionTask", inversedBy = "childWorkflowExecution")
+     * @var WorkflowExecutionTask
+     */
+    private $parentWorkflowExecutionTask;
+
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
     private $maxRuntime;
 
     /** @ORM\Column(type = "text") @Serializer\Expose */
     private $input;
 
-    /** @ORM\Column(type = "string", length = 15) */
+    /** @ORM\Column(type = "string", length = 15) @Serializer\Expose */
     private $state = self::STATE_OPEN;
 
     /**
@@ -108,7 +114,7 @@ class WorkflowExecution
      */
     private $history;
 
-    public function __construct(Workflow $workflow, $input, $maxRuntime = 3600, array $tags)
+    public function __construct(Workflow $workflow, $input, $maxRuntime = 3600, array $tags = array())
     {
         $this->workflow = $workflow;
         $this->input = $input;
@@ -127,6 +133,29 @@ class WorkflowExecution
     public function getWorkflow()
     {
         return $this->workflow;
+    }
+
+    /**
+     * @Serializer\VirtualProperty
+     *
+     * @return string
+     */
+    public function getWorkflowName()
+    {
+        return $this->workflow->getName();
+    }
+
+    public function setParentWorkflowExecutionTask(WorkflowExecutionTask $task)
+    {
+        $this->parentWorkflowExecutionTask = $task;
+    }
+
+    /**
+     * @return WorkflowExecutionTask|null
+     */
+    public function getParentWorkflowExecutionTask()
+    {
+        return $this->parentWorkflowExecutionTask;
     }
 
     public function getMaxRuntime()
@@ -156,6 +185,10 @@ class WorkflowExecution
 
         if (empty(self::$stateTransitionMap[$state])) {
             $this->finishedAt = new \DateTime();
+
+            if (null !== $this->parentWorkflowExecutionTask) {
+                $this->parentWorkflowExecutionTask->setFinished();
+            }
         }
 
         $this->state = $state;
@@ -164,6 +197,18 @@ class WorkflowExecution
     public function getTags()
     {
         return $this->tags->map(function(Tag $tag) { return $tag->getName(); });
+    }
+
+    public function getActivityTaskWithId($id)
+    {
+        $id = (string) $id;
+        foreach ($this->tasks as $task) {
+            if ($task instanceof ActivityTask && $task->getId() === $id) {
+                return new Some($task);
+            }
+        }
+
+        return None::create();
     }
 
     public function isOpen()
@@ -181,10 +226,15 @@ class WorkflowExecution
         return self::STATE_SUCCEEDED === $this->state;
     }
 
+    public function isLastDecision()
+    {
+        return ! $this->hasOpenActivities() && ! $this->pendingDecisionTask;
+    }
+
     public function hasOpenActivities()
     {
         foreach ($this->tasks as $task) {
-            if ( ! $task instanceof ActivityTask) {
+            if ( ! $task instanceof AbstractActivityTask) {
                 continue;
             }
 
@@ -212,16 +262,6 @@ class WorkflowExecution
         return false;
     }
 
-    public function hasPendingDecisionTask()
-    {
-        return $this->pendingDecisionTask;
-    }
-
-    public function setPendingDecisionTask($bool)
-    {
-        $this->pendingDecisionTask = (boolean) $bool;
-    }
-
     /**
      * @return Option<DecisionTask>
      */
@@ -236,21 +276,50 @@ class WorkflowExecution
         return None::create();
     }
 
-    public function createDecisionTask()
+    public function createDecisionTaskIfPending()
+    {
+        // If new activity results arrived between scheduling the last decision task and retrieving the decision
+        // result, we need to dispatch a new decision task for these new results.
+        if ( ! $this->isOpen()) {
+            return null;
+        }
+
+        if ( ! $this->pendingDecisionTask) {
+            return null;
+        }
+
+        $this->pendingDecisionTask = false;
+
+        return $this->createDecisionTask();
+    }
+
+    public function scheduleDecisionTask()
+    {
+        // Check if we need to schedule a new decision task. Generally, we always schedule a new decision task.
+        // If there is already a decision task in progress, we cannot directly schedule another one, but we will
+        // instead record that new activity has become available, and process it as soon as the currently
+        // running decision task finishes. In case, that the workflow execution was terminated, we will not
+        // schedule any new tasks, but just allow currently running activity tasks to report their results.
+        if ( ! $this->isOpen()) {
+            return null;
+        }
+
+        if ($this->getOpenDecisionTask()->isDefined()) {
+            $this->pendingDecisionTask = true;
+
+            return null;
+        }
+
+        return $this->createDecisionTask();
+    }
+
+    private function createDecisionTask()
     {
         if ($this->getOpenDecisionTask()->isDefined()) {
             throw new \LogicException(sprintf('There can only be one open decision task at a time for %s.', $this));
         }
 
-        $lastTask = null;
-        foreach (array_reverse($this->tasks->toArray()) as $task) {
-            if ($task instanceof ActivityTask && ! $task->isOpen()) {
-                $lastTask = $task;
-                break;
-            }
-        }
-
-        $task = new DecisionTask($this, $lastTask);
+        $task = new DecisionTask($this);
         $this->tasks->add($task);
 
         return $task;
@@ -266,6 +335,14 @@ class WorkflowExecution
     public function createActivityTask(ActivityType $activity, $input, array $controlData = array())
     {
         $task = new ActivityTask($this, $activity, $input, $controlData);
+        $this->tasks->add($task);
+
+        return $task;
+    }
+
+    public function createWorkflowExecutionTask(WorkflowExecution $childExecution, array $controlData = array())
+    {
+        $task = new WorkflowExecutionTask($this, $childExecution, $controlData);
         $this->tasks->add($task);
 
         return $task;

@@ -10,8 +10,8 @@ Features:
 - Flexible Control Flow (including parallel, or sequential execution, dependencies, retry logic, etc.)
 - Language Agnostic
 - Tracking of Execution State
+- Child Workflows
 - Versioning of Workflows (not yet implemented)
-- Child Workflows (not yet implemented)
 - Signaling of Tasks (not yet implemented)
 
 

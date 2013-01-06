@@ -12,34 +12,23 @@ $serializer = \JMS\Serializer\SerializerBuilder::create()
 $decider = new \Scrutinizer\Workflow\Client\Decider\SimpleCallableDecider(
     $amqpCon,
     $serializer,
-    'test_deciderqueue',
+    $_SERVER['argv'][1],
     new \Scrutinizer\RabbitMQ\Rpc\RpcClient($amqpCon, $serializer),
     function (\Scrutinizer\Workflow\Client\Transport\WorkflowExecution $execution, \Scrutinizer\Workflow\Client\Decider\DecisionsBuilder $builder) {
         if ($execution->isInitialDecision()) {
-            for ($i=0; $i<50; $i++) {
-                $builder->scheduleActivity('doA', 'foo', array('i' => $i));
-            }
+            $builder
+                ->scheduleActivity('doA', '', array('id' => 'a'))
+                ->scheduleChildWorkflow('child_flow', '', array('id' => 'b'))
+                ->scheduleActivity('doA', '', array('id' => 'c'))
+                ->scheduleChildWorkflow('child_flow', '', array('id' => 'd'))
+            ;
 
             return;
         }
 
-        $scheduled = false;
-        foreach ($execution->getClosedActivityTasksSinceLastDecision() as $task) {
-            /** @var $task \Scrutinizer\Workflow\Client\Transport\ActivityTask */
-
-            if ( ! isset($task->control['i']) || $task->control['i'] % 5 !== 0) {
-                continue;
-            }
-
-            $scheduled = true;
-            $builder->scheduleActivity('doA', 'bar', array('from' => $task->control['i']));
+        if ( ! $execution->hasOpenActivities()) {
+            $builder->succeedExecution();
         }
-
-        if ($scheduled || $execution->hasOpenActivities()) {
-            return;
-        }
-
-        $builder->succeedExecution();
     }
 );
 $decider->run();

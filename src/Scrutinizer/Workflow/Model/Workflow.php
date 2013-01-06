@@ -21,7 +21,7 @@ namespace Scrutinizer\Workflow\Model;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * @ORM\Entity
+ * @ORM\Entity(repositoryClass = "Scrutinizer\Workflow\Model\Repository\WorkflowRepository")
  * @ORM\Table(name = "workflows")
  * @ORM\ChangeTrackingPolicy("DEFERRED_EXPLICIT")
  */
