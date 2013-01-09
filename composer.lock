@@ -1,5 +1,5 @@
 {
-    "hash": "a4e40cf873c342ff1faa283d0500645e",
+    "hash": "84532013a6747c239235ab18403cb243",
     "packages": [
         {
             "name": "doctrine/common",
@@ -613,7 +613,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/rabbitmq",
-                "reference": "183094aea28320be6e9e92123270ca039a524ebf"
+                "reference": "b18ed9a2a62101e8b341a6fa8d8fc76fbd9a36e8"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -623,7 +623,7 @@
             "require-dev": {
                 "symfony/process": "2.*"
             },
-            "time": "2013-01-06 13:07:36",
+            "time": "2013-01-08 13:27:57",
             "type": "library",
             "installation-source": "source",
             "autoload": {
@@ -729,7 +729,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/videlalvaro/php-amqplib/archive/6ce5a028496a5c68371bd571d47467c583d17154.zip",
+                "url": "https://github.com/videlalvaro/php-amqplib/archive/c508ffa57037cb15aa747d43ea33a3e9fe2e7716.zip",
                 "reference": "6ce5a028496a5c68371bd571d47467c583d17154",
                 "shasum": ""
             },
@@ -822,7 +822,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "fac2a1890b069faca04078f149ea1dd3e74ce0cb"
+                "reference": "9e7b9470cf4c68d81739e6400f2714c0ad0ca4a3"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -830,7 +830,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-08 12:54:27",
+            "time": "2013-01-09 20:03:51",
             "type": "library",
             "installation-source": "source",
             "autoload": {

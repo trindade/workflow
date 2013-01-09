@@ -37,7 +37,7 @@ class ActivityResult
     /** @Serializer\Type("string") */
     public $failureReason;
 
-    /** @Serializer\Type("string") */
+    /** @Serializer\Type("array") */
     public $failureException;
 
     /** @Serializer\Type("string") */

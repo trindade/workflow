@@ -45,7 +45,7 @@ class ActivityTask extends AbstractActivityTask
     /** @ORM\Column(type = "string", nullable = true) */
     private $failureReason;
 
-    /** @ORM\Column(type = "text", nullable = true) */
+    /** @ORM\Column(type = "json_array", nullable = true) */
     private $failureException;
 
     /**
@@ -106,7 +106,7 @@ class ActivityTask extends AbstractActivityTask
         return ! $this->isOpen();
     }
 
-    public function setFailureDetails($reason, $exception = null)
+    public function setFailureDetails($reason, array $exception = null)
     {
         $this->state = self::STATE_FAILED;
         $this->setFinished();

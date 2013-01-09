@@ -81,6 +81,9 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         });
     }
 
+    /**
+     * @group failure
+     */
     public function testComplexFlow()
     {
         $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
