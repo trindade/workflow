@@ -473,18 +473,18 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/schmittjoh/php-collection",
-                "reference": "38df966c266016c04d8fc2079e7a8fff023694f3"
+                "reference": "3d298a49601381d5155b88a9dc4e8561a1654ab0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/schmittjoh/php-collection/archive/38df966c266016c04d8fc2079e7a8fff023694f3.zip",
-                "reference": "38df966c266016c04d8fc2079e7a8fff023694f3",
+                "url": "https://github.com/schmittjoh/php-collection/archive/3d298a49601381d5155b88a9dc4e8561a1654ab0.zip",
+                "reference": "3d298a49601381d5155b88a9dc4e8561a1654ab0",
                 "shasum": ""
             },
             "require": {
                 "phpoption/phpoption": "1.*"
             },
-            "time": "2013-01-05 10:10:42",
+            "time": "2013-01-09 23:18:43",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -729,7 +729,7 @@
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/videlalvaro/php-amqplib/archive/c508ffa57037cb15aa747d43ea33a3e9fe2e7716.zip",
+                "url": "https://github.com/videlalvaro/php-amqplib/archive/fd27d02bd6d037a7e96dc562ffb02de70fd3acfd.zip",
                 "reference": "6ce5a028496a5c68371bd571d47467c583d17154",
                 "shasum": ""
             },
@@ -822,7 +822,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "9e7b9470cf4c68d81739e6400f2714c0ad0ca4a3"
+                "reference": "01e7cd45a9bdc00f15d9c62afb9520f9666c69b5"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -830,7 +830,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-09 20:03:51",
+            "time": "2013-01-10 21:22:39",
             "type": "library",
             "installation-source": "source",
             "autoload": {

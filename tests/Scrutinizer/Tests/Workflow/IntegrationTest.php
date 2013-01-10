@@ -90,6 +90,9 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->startProcess('php Fixture/failing_activity_worker.php test_activity_doB');
         $this->startProcess('php Fixture/complex_testflow_decider.php');
 
+        $eventLog = tempnam(sys_get_temp_dir(), 'event-log');
+        $this->startProcess('php Fixture/test_listener.php '.escapeshellarg($eventLog));
+
         $executions = array();
         for ($i=1; $i<=10; $i++) {
             $rs = $this->client->startExecution('testflow', 'foo');
@@ -116,6 +119,10 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
             $this->assertFalse($execution->hasOpenTasks(), $this->getDebugInfo());
             $this->assertCount(13, $execution->getTasks());
         }
+
+        $log = file_get_contents($eventLog);
+        unlink($eventLog);
+        $this->assertEquals($this->em->createQuery("SELECT COUNT(e) FROM Workflow:Event e")->getSingleScalarResult(), substr_count($log, "\n"));
     }
 
     /**
