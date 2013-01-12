@@ -37,11 +37,13 @@ class WorkflowExecution
     const STATE_OPEN = 'open';
     const STATE_FAILED = 'failed';
     const STATE_SUCCEEDED = 'succeeded';
+    const STATE_TERMINATED = 'terminated';
 
     private static $stateTransitionMap = array(
-        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED),
+        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED, self::STATE_TERMINATED),
         self::STATE_FAILED => array(),
         self::STATE_SUCCEEDED => array(),
+        self::STATE_TERMINATED => array(),
     );
 
     /**
@@ -133,6 +135,11 @@ class WorkflowExecution
     public function getWorkflow()
     {
         return $this->workflow;
+    }
+
+    public function getHistory()
+    {
+        return $this->history;
     }
 
     /**

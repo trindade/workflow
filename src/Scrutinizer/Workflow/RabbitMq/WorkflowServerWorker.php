@@ -45,6 +45,7 @@ use Scrutinizer\Workflow\RabbitMq\Transport\CreateWorkflowType;
 use Scrutinizer\Workflow\RabbitMq\Transport\Decision;
 use Scrutinizer\Workflow\RabbitMq\Transport\DecisionResponse;
 use Scrutinizer\Workflow\RabbitMq\Transport\StartWorkflowExecution;
+use Scrutinizer\Workflow\RabbitMq\Transport\TerminateWorkflowExecution;
 
 class WorkflowServerWorker
 {
@@ -64,17 +65,18 @@ class WorkflowServerWorker
 
         $this->channel->basic_qos(0, 5, false);
 
-        $this->channel->queue_declare('workflow_execution', false, true, false, false);
-        $this->channel->queue_declare('workflow_decision', false,  true, false, false);
-        $this->channel->queue_declare('workflow_activity_result', false,  true, false, false);
-        $this->channel->queue_declare('workflow_type', false,  true, false, false);
-        $this->channel->queue_declare('workflow_activity_type', false,  true, false, false);
-
-        $this->channel->basic_consume('workflow_execution', '', false, false, false, false, $this->createCallback('consumeExecution'));
-        $this->channel->basic_consume('workflow_decision', '',  false, false, false, false, $this->createCallback('consumeDecision'));
-        $this->channel->basic_consume('workflow_activity_result', '',  false, false, false, false, $this->createCallback('consumeActivityResult'));
-        $this->channel->basic_consume('workflow_type', '',  false, false, false, false, $this->createCallback('consumeWorkflowType'));
-        $this->channel->basic_consume('workflow_activity_type', '',  false, false, false, false, $this->createCallback('consumeActivityType'));
+        $queuesToMethods = array(
+            'workflow_execution' => 'consumeExecution',
+            'workflow_decision' => 'consumeDecision',
+            'workflow_activity_result' => 'consumeActivityResult',
+            'workflow_type' => 'consumeWorkflowType',
+            'workflow_activity_type' => 'consumeActivityType',
+            'workflow_execution_termination' => 'consumeExecutionTermination',
+        );
+        foreach ($queuesToMethods as $queueName => $methodName) {
+            $this->channel->queue_declare($queueName, false, true, false, false);
+            $this->channel->basic_consume($queueName, '', false, false, false, false, $this->createCallback($methodName));
+        }
 
         $this->channel->exchange_declare('workflow_log', 'topic');
         $this->channel->exchange_declare('workflow_events', 'topic');
@@ -160,6 +162,23 @@ class WorkflowServerWorker
         };
     }
 
+    private function consumeExecutionTermination(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
+    {
+        /** @var $terminateExecution TerminateWorkflowExecution */
+        $terminateExecution = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\TerminateWorkflowExecution');
+
+        /** @var $execution WorkflowExecution */
+        $execution = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusive($terminateExecution->executionId);
+        $builder->setWorkflowExecution($execution);
+
+        $execution->setState(WorkflowExecution::STATE_TERMINATED);
+        $em->persist($execution);
+        $em->flush();
+
+        $this->dispatchEvent($builder, $execution, 'execution.terminated');
+        $this->updateParentExecution($builder, $em, $execution);
+    }
+
     private function consumeWorkflowType(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
     {
         /** @var $createWorkflow CreateWorkflowType */
@@ -232,15 +251,22 @@ class WorkflowServerWorker
 
         /** @var $decisionTask DecisionTask */
         $decisionTask = $execution->getOpenDecisionTask()->get();
+        $decisionTask->close();
+
         $this->dispatchEvent($builder, $execution, 'execution.new_decision', array('nb_decisions' => count($decisionResponse->decisions), 'task_id' => $decisionTask->getId()));
+
+        $em->persist($execution);
+        $em->flush();
+
+        // If an execution has been closed while a decision was in progress (for example through termination of a
+        // workflow execution), we ignore the result of the decision task.
+        if ($execution->isClosed()) {
+            return;
+        }
 
         if (empty($decisionResponse->decisions) && $execution->isLastDecision()) {
             throw new \InvalidArgumentException('The last decision response cannot contain an empty set of decisions.');
         }
-
-        $decisionTask->close();
-        $em->persist($execution);
-        $em->flush();
 
         foreach ($decisionResponse->decisions as $decision) {
             /** @var $decision Decision */
@@ -251,7 +277,7 @@ class WorkflowServerWorker
                     $em->persist($execution);
                     $em->flush();
 
-                    $this->dispatchEvent($builder, $execution, 'execution.status_change', array('status' => 'success', 'decision_task_id' => $decisionTask->getId()));
+                    $this->dispatchEvent($builder, $execution, 'execution.succeeded', array('decision_task_id' => $decisionTask->getId()));
                     $this->updateParentExecution($builder, $em, $execution);
 
                     break;
@@ -304,7 +330,7 @@ class WorkflowServerWorker
                     $em->persist($execution);
                     $em->flush();
 
-                    $this->dispatchEvent($builder, $execution, 'execution.status_change', array('status' => 'failed', 'decision_task_id' => $decisionTask->getId()));
+                    $this->dispatchEvent($builder, $execution, 'execution.failed', array('decision_task_id' => $decisionTask->getId()));
                     $this->updateParentExecution($builder, $em, $execution);
 
                     break;
@@ -334,6 +360,7 @@ class WorkflowServerWorker
         $this->dispatchEvent($builder, $parentExecution, 'execution.child_execution_result', array(
             'task_id' => $parentTask->getId(),
             'child_execution_id' => $execution->getId(),
+            'child_execution_state' => $execution->getState(),
         ));
 
         $parentDecisionTask = $parentExecution->scheduleDecisionTask();

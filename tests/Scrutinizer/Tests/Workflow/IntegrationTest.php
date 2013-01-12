@@ -32,6 +32,7 @@ use Scrutinizer\RabbitMQ\Rpc\RpcClient;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
 use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
+use Scrutinizer\Workflow\Model\Event;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 use Symfony\Component\Process\Process;
 
@@ -56,6 +57,36 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
     private $executionRepo;
 
     private $processes = array();
+
+    /**
+     * @group termination
+     */
+    public function testExecutionIsTerminated()
+    {
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
+        $this->startProcess('php Fixture/slow_decider.php test_deciderqueue');
+
+        $rs = $this->client->startExecution('testflow', '');
+        sleep(1);
+
+        $this->assertArrayHasKey('execution_id', $rs);
+        $this->assertEquals(array(), $this->client->terminateExecution($rs['execution_id']));
+
+        sleep(6);
+
+        /** @var $execution WorkflowExecution */
+        $execution = $this->em->find('Workflow:WorkflowExecution', $rs['execution_id']);
+        $this->assertCount(1, $execution->getTasks());
+        $this->assertTrue($execution->getTasks()->get(0)->isClosed(), $this->getDebugInfo());
+
+        $eventNames = array();
+        foreach ($execution->getHistory() as $event) {
+            /** @var $event Event */
+
+            $eventNames[] = $event->getName();
+        }
+        $this->assertEquals(array('execution.started', 'execution.new_decision_task', 'execution.terminated', 'execution.new_decision'), $eventNames);
+    }
 
     public function testSuccessfulFlowWithoutActivity()
     {

@@ -11,7 +11,7 @@ if ( ! is_file($_SERVER['argv'][1])) {
 
 $serializer = \JMS\Serializer\SerializerBuilder::create()->build();
 
-$listener = new \Scrutinizer\Workflow\Client\Listener\SimpleCallableListener($amqpCon, '#',
+$listener = new \Scrutinizer\Workflow\Client\Listener\SimpleCallableListener($amqpCon,
     function(\Scrutinizer\Workflow\Client\Transport\Event $event) use ($serializer) {
         file_put_contents($_SERVER['argv'][1], $serializer->serialize($event, 'json')."\n", FILE_APPEND);
     }

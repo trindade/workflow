@@ -12,7 +12,7 @@
         "doctrine/dbal": "*",
         "doctrine/common": "2.*",
         "doctrine/migrations": "*@dev",
-        "videlalvaro/php-amqplib": "dev-master#6ce5a028496a5c68371bd571d47467c583d17154",
+        "videlalvaro/php-amqplib": "dev-master",
         "jms/serializer": "dev-master",
         "psr/log": "1.0.0",
         "symfony/console": "2.*",
