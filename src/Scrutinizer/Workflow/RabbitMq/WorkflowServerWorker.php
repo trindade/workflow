@@ -388,9 +388,15 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->channel->queue_declare($activityTask->getActivityType()->getQueueName(), false, true, false, false);
-                    $builder->queueMessage(new AMQPMessage($activityTask->getInput(), array(
-                        'correlation_id' => $activityTask->getId().'.'.$execution->getId(),
-                    )), '', $activityTask->getActivityType()->getQueueName());
+
+                    $activityMessage = new AMQPMessage(
+                        $activityTask->getInput(),
+                        array(
+                            'correlation_id' => $activityTask->getId().'.'.$execution->getId(),
+                            'delivery_mode' => 2,
+                        )
+                    );
+                    $builder->queueMessage($activityMessage, '', $activityTask->getActivityType()->getQueueName());
 
                     $this->dispatchEvent($builder, $execution, 'execution.new_activity_task', array('task_id' => $activityTask->getId()));
 
@@ -549,6 +555,12 @@ class WorkflowServerWorker
         $deciderQueueName = $execution->getWorkflow()->getDeciderQueueName();
         $this->channel->queue_declare($deciderQueueName, false, true, false, false);
 
-        $builder->queueMessage(new AMQPMessage($this->serialize($execution, array('Default', 'Details'))), '', $deciderQueueName);
+        $message = new AMQPMessage(
+            $this->serialize($execution, array('Default', 'Details')),
+            array(
+                'delivery_mode' => 2,
+            )
+        );
+        $builder->queueMessage($message, '', $deciderQueueName);
     }
 }

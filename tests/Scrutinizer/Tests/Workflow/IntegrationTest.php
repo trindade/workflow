@@ -300,7 +300,13 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
+        pcntl_signal(SIGINT, function() {
+            echo $this->getDebugInfo();
+            exit;
+        });
+
         $this->amqpCon = DsnUtils::createCon($_SERVER['CONFIG']['rabbitmq']['dsn']);
+
         $this->purgeQueue('workflow_execution');
         $this->purgeQueue('workflow_decision');
         $this->purgeQueue('workflow_activity_result');
@@ -339,11 +345,6 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->purgeQueue('test_deciderqueue');
         $this->purgeQueue('test_activity_doA');
         $this->purgeQueue('test_activity_doB');
-
-        pcntl_signal(SIGINT, function() {
-            echo $this->getDebugInfo();
-            exit;
-        });
     }
 
     protected function tearDown()
