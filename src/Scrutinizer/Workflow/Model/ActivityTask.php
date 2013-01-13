@@ -69,7 +69,6 @@ class ActivityTask extends AbstractActivityTask
 
     /**
      * @Serializer\VirtualProperty
-     * @Serializer\Groups({"decider"})
      */
     public function getActivityName()
     {

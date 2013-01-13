@@ -51,6 +51,7 @@ class WorkflowExecution
      * @ORM\Column(type = "bigint", options = {"unsigned": true})
      * @ORM\GeneratedValue(strategy = "AUTO")
      *
+     * @Serializer\Groups({"Default", "Listing"})
      * @Serializer\Expose
      */
     private $id;
@@ -67,10 +68,18 @@ class WorkflowExecution
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
     private $maxRuntime;
 
-    /** @ORM\Column(type = "text") @Serializer\Expose */
+    /**
+     * @ORM\Column(type = "text")
+     * @Serializer\Expose
+     * @Serializer\Groups({"Default", "Listing"})
+     */
     private $input;
 
-    /** @ORM\Column(type = "string", length = 15) @Serializer\Expose */
+    /**
+     * @ORM\Column(type = "string", length = 15)
+     * @Serializer\Expose
+     * @Serializer\Groups({"Default", "Listing"})
+     */
     private $state = self::STATE_OPEN;
 
     /**
@@ -86,6 +95,7 @@ class WorkflowExecution
      * @ORM\Column(type = "datetime")
      *
      * @Serializer\Expose
+     * @Serializer\Groups({"Default", "Listing"})
      */
     private $createdAt;
 
@@ -98,6 +108,7 @@ class WorkflowExecution
      * @ORM\OneToMany(targetEntity = "AbstractTask", mappedBy = "workflowExecution", cascade = {"persist", "refresh"}, fetch = "EAGER")
      * @ORM\OrderBy({"id" = "ASC"})
      *
+     * @Serializer\Groups({"Details"})
      * @Serializer\Expose
      */
     private $tasks;
@@ -112,6 +123,7 @@ class WorkflowExecution
      * @ORM\OneToMany(targetEntity = "Event", mappedBy = "workflowExecution", cascade = {"refresh"}, fetch = "EAGER")
      * @ORM\OrderBy({"id" = "ASC"})
      *
+     * @Serializer\Groups({"Details"})
      * @Serializer\Expose
      */
     private $history;
@@ -144,6 +156,7 @@ class WorkflowExecution
 
     /**
      * @Serializer\VirtualProperty
+     * @Serializer\Groups({"Default", "Listing"})
      *
      * @return string
      */

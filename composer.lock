@@ -822,7 +822,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "fac1995cfd6d0d957d83c082d947cd09b41e1803"
+                "reference": "a7ac072efef7a4a3bd009ba97acff2061be13b2b"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -830,7 +830,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-12 22:58:58",
+            "time": "2013-01-13 09:52:00",
             "type": "library",
             "installation-source": "source",
             "autoload": {

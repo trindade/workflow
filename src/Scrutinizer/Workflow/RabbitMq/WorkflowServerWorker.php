@@ -24,6 +24,7 @@ use Doctrine\DBAL\LockMode;
 use Doctrine\DBAL\Types\DateTimeTzType;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Query\Expr\Join;
 use JMS\Serializer\Exclusion\GroupsExclusionStrategy;
 use JMS\Serializer\Serializer;
 use PhpAmqpLib\Connection\AMQPConnection;
@@ -44,6 +45,8 @@ use Scrutinizer\Workflow\RabbitMq\Transport\CreateActivityType;
 use Scrutinizer\Workflow\RabbitMq\Transport\CreateWorkflowType;
 use Scrutinizer\Workflow\RabbitMq\Transport\Decision;
 use Scrutinizer\Workflow\RabbitMq\Transport\DecisionResponse;
+use Scrutinizer\Workflow\RabbitMq\Transport\ListWorkflowExecutions;
+use Scrutinizer\Workflow\RabbitMq\Transport\SearchWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\StartWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\TerminateWorkflowExecution;
 
@@ -67,11 +70,12 @@ class WorkflowServerWorker
 
         $queuesToMethods = array(
             'workflow_execution' => 'consumeExecution',
+            'workflow_execution_termination' => 'consumeExecutionTermination',
+            'workflow_execution_listing' => 'consumeExecutionListing',
             'workflow_decision' => 'consumeDecision',
             'workflow_activity_result' => 'consumeActivityResult',
             'workflow_type' => 'consumeWorkflowType',
             'workflow_activity_type' => 'consumeActivityType',
-            'workflow_execution_termination' => 'consumeExecutionTermination',
         );
         foreach ($queuesToMethods as $queueName => $methodName) {
             $this->channel->queue_declare($queueName, false, true, false, false);
@@ -118,7 +122,7 @@ class WorkflowServerWorker
                 }
 
                 if ($message->has('reply_to')) {
-                    $body = json_encode($builder->getResponseData(), JSON_FORCE_OBJECT);
+                    $body = $this->serialize($builder->getResponseData(), $builder->getSerializerGroups());
                     $this->channel->basic_publish(new AMQPMessage($body, array(
                         'correlation_id' => $message->get('correlation_id'),
                     )), '', $message->get('reply_to'));
@@ -136,13 +140,16 @@ class WorkflowServerWorker
 
                 $execution = $builder->getWorkflowExecution();
                 if (null !== $execution && null !== $execution->getId()) {
-                    $this->dispatchEvent(null, $execution, 'execution.error_occurred', array('message' => $ex->getMessage()));
+                    $this->dispatchEvent(null, $execution, 'execution.error_occurred', array(
+                        'message' => $ex->getMessage(),
+                    ));
                 }
 
                 if ($message->has('reply_to')) {
                     $this->channel->basic_publish(
                         new AMQPMessage(
-                            $this->serialize(new RpcError($ex->getMessage())),
+                            'scrutinizer.rpc_error:'.$this->serialize(new RpcError($ex->getMessage(), array(
+                            ))),
                             array('correlation_id' => $message->get('correlation_id'))
                         ),
                         '',
@@ -160,6 +167,65 @@ class WorkflowServerWorker
                 $this->channel->basic_nack($message->get('delivery_tag'));
             }
         };
+    }
+
+    private function consumeExecutionListing(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
+    {
+        /** @var $listExecutions ListWorkflowExecutions */
+        $listExecutions = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\ListWorkflowExecutions');
+
+        $qb = $em->createQueryBuilder();
+        $qb->select('e')->from('Workflow:WorkflowExecution', 'e');
+        $conditions = array();
+
+        if ( ! empty($listExecutions->status)) {
+            switch ($listExecutions->status) {
+                case 'open':
+                    $conditions[] = $qb->expr()->eq('e.state', ':state');
+                    $qb->setParameter('state', WorkflowExecution::STATE_OPEN);
+                    break;
+
+                case 'closed':
+                    $conditions[] = $qb->expr()->neq('e.state', ':state');
+                    $qb->setParameter('state', WorkflowExecution::STATE_OPEN);
+                    break;
+
+                default:
+                    throw new \InvalidArgumentException(sprintf('The status "%s" is not supported. Supported stati: "open", "closed"', $listExecutions->status));
+            }
+        }
+
+        if ( ! empty($listExecutions->tags)) {
+            $qb->innerJoin('e.tags', 't');
+            $conditions[] = $qb->expr()->in('t.name', ':tags');
+            $qb->setParameter('tags', $listExecutions->tags);
+        }
+
+        if ( ! empty($listExecutions->workflows)) {
+            $qb->innerJoin('e.workflow', 'w');
+            $conditions[] = $qb->expr()->in('w.name', ':workflows');
+            $qb->setParameter('workflows', $listExecutions->workflows);
+        }
+
+        if ( ! empty($conditions)) {
+            $qb->where(call_user_func_array(array($qb->expr(), 'andX'), $conditions));
+        }
+
+        $qb->orderBy('e.id', $listExecutions->order === ListWorkflowExecutions::ORDER_ASC ? 'ASC' : 'DESC');
+        $query = $qb->getQuery();
+        $query->setMaxResults($perPage = max(1, min(100, $listExecutions->perPage)));
+        $query->setFirstResult($perPage * (($page = max(1, $listExecutions->page)) - 1));
+        $executions = $query->getResult();
+
+        $builder
+            ->setSerializerGroups(array('Listing'))
+            ->setResponseData(array(
+                'executions' => $executions,
+                'count' => count($executions),
+                'page' => $page,
+                'per_page' => $perPage,
+            ))
+        ;
     }
 
     private function consumeExecutionTermination(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
@@ -455,7 +521,7 @@ class WorkflowServerWorker
         ));
 
         $publishArgs = array(
-            new AMQPMessage($this->serialize(new Event($execution, $name, $attributes), array('Default', 'event'))),
+            new AMQPMessage($this->serialize(new Event($execution, $name, $attributes), array('Default', 'Details'))),
             'workflow_events',
             $name
         );
@@ -474,6 +540,6 @@ class WorkflowServerWorker
         $deciderQueueName = $execution->getWorkflow()->getDeciderQueueName();
         $this->channel->queue_declare($deciderQueueName, false, true, false, false);
 
-        $builder->queueMessage(new AMQPMessage($this->serialize($execution, array('Default', 'decider'))), '', $deciderQueueName);
+        $builder->queueMessage(new AMQPMessage($this->serialize($execution, array('Default', 'Details'))), '', $deciderQueueName);
     }
 }

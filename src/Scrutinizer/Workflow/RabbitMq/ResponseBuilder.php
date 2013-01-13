@@ -10,6 +10,7 @@ class ResponseBuilder
     private $messages = array();
     private $responseData = array();
     private $workflowExecution;
+    private $serializerGroups = array();
 
     public function queueMessage(AMQPMessage $message, $exchange, $routingKey)
     {
@@ -21,6 +22,18 @@ class ResponseBuilder
     public function getMessages()
     {
         return $this->messages;
+    }
+
+    public function setSerializerGroups(array $groups)
+    {
+        $this->serializerGroups = $groups;
+
+        return $this;
+    }
+
+    public function getSerializerGroups()
+    {
+        return $this->serializerGroups;
     }
 
     public function setResponseData(array $data)

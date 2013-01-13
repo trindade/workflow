@@ -25,11 +25,13 @@ use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Tools\SchemaTool;
+use JMS\Serializer\Handler\HandlerRegistryInterface;
 use JMS\Serializer\Serializer;
 use JMS\Serializer\SerializerBuilder;
 use PhpAmqpLib\Connection\AMQPConnection;
 use Scrutinizer\RabbitMQ\Rpc\RpcClient;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
+use Scrutinizer\Workflow\Client\Serializer\TaskHandler;
 use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Scrutinizer\Workflow\Model\Event;
@@ -57,6 +59,44 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
     private $executionRepo;
 
     private $processes = array();
+
+    /**
+     * @group listing
+     */
+    public function testExecutionListing()
+    {
+        $this->client->startExecution('testflow', 'a', array('foo'));
+        $this->client->startExecution('testflow', 'b', array('foo', 'bar'));
+
+        $this->client->declareWorkflowType('foo', 'bar');
+        $this->client->startExecution('foo', 'c', array('baz'));
+        $this->client->startExecution('foo', 'd');
+
+        $rs = $this->client->listExecutions();
+        $this->assertCount(4, $rs->executions, $this->getDebugInfo());
+        $this->assertEquals(4, $rs->count, $this->getDebugInfo());
+        $this->assertEquals(20, $rs->perPage, $this->getDebugInfo());
+        $this->assertEquals(1, $rs->page, $this->getDebugInfo());
+        $this->assertEquals('d', $rs->executions[0]->input, $this->getDebugInfo());
+        $this->assertEquals('a', $rs->executions[3]->input, $this->getDebugInfo());
+
+        $rs = $this->client->listExecutions(array('testflow'));
+        $this->assertCount(2, $rs->executions, $this->getDebugInfo());
+        $this->assertEquals('b', $rs->executions[0]->input);
+        $this->assertEquals('a', $rs->executions[1]->input);
+
+        $rs = $this->client->listExecutions(array('testflow'), array(), null, 'asc');
+        $this->assertCount(2, $rs->executions);
+        $this->assertEquals('a', $rs->executions[0]->input);
+        $this->assertEquals('b', $rs->executions[1]->input);
+
+        $rs = $this->client->listExecutions(array(), array('bar'));
+        $this->assertCount(1, $rs->executions);
+        $this->assertEquals('b', $rs->executions[0]->input);
+
+        $rs = $this->client->listExecutions(array(), array('mooooooo'));
+        $this->assertCount(0, $rs->executions);
+    }
 
     /**
      * @group termination
@@ -148,7 +188,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         foreach ($executions as $execution) {
             $this->assertTrue($execution->hasSucceeded(), $this->getDebugInfo());
             $this->assertFalse($execution->hasOpenTasks(), $this->getDebugInfo());
-            $this->assertCount(13, $execution->getTasks());
+            $this->assertCount(13, $execution->getTasks(), $this->getDebugInfo());
         }
 
         $log = file_get_contents($eventLog);
@@ -250,7 +290,12 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($this->processes[0]->isRunning(), 'Server failed to start.'."\n\n".$this->getDebugInfo());
 
         $this->channel = $this->amqpCon->channel();
-        $this->serializer = SerializerBuilder::create()->build();
+        $this->serializer = SerializerBuilder::create()
+            ->addDefaultHandlers()
+            ->configureHandlers(function(HandlerRegistryInterface $registry) {
+                $registry->registerSubscribingHandler(new TaskHandler());
+            })
+            ->build();
         $this->client = new WorkflowClient(new RpcClient($this->amqpCon, $this->serializer));
 
         $this->registry = new SimpleRegistry($_SERVER['CONFIG']);
