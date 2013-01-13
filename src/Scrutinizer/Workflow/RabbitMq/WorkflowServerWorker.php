@@ -237,7 +237,7 @@ class WorkflowServerWorker
         $execution = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusive($terminateExecution->executionId);
         $builder->setWorkflowExecution($execution);
 
-        $execution->setState(WorkflowExecution::STATE_TERMINATED);
+        $execution->setTerminated();
         $em->persist($execution);
         $em->flush();
 
@@ -339,7 +339,7 @@ class WorkflowServerWorker
 
             switch ($decision->type) {
                 case Decision::TYPE_EXECUTION_SUCCEEDED:
-                    $execution->setState(WorkflowExecution::STATE_SUCCEEDED);
+                    $execution->setSucceeded();
                     $em->persist($execution);
                     $em->flush();
 
@@ -348,12 +348,22 @@ class WorkflowServerWorker
 
                     break;
 
+                case Decision::TYPE_EXECUTION_CANCELED:
+                    $execution->setCanceled($decision->getAttribute('details')->getOrElse(array()));
+                    $em->persist($execution);
+                    $em->flush();
+
+                    $this->dispatchEvent($builder, $execution, 'execution.canceled', array('decision_task_id' => $decisionTask->getId()));
+                    $this->updateParentExecution($builder, $em, $execution);
+
+                    break;
+
                 case Decision::TYPE_SCHEDULE_CHILD_WORKFLOW:
                     $childExecution = $em->getRepository('Workflow:WorkflowExecution')->build(
                         $decision->attributes['workflow'],
                         $decision->getInput(),
-                        isset($decision->attributes['max_runtime']) ? (integer) $decision->attributes['max_runtime'] : 3600,
-                        isset($decision->attributes['tags']) ? $decision->attributes['tags'] : array()
+                        $decision->getAttribute('max_runtime')->getOrElse(3600),
+                        $decision->getAttribute('tags')->getOrElse(array())
                     );
                     $childDecisionTask = $childExecution->scheduleDecisionTask();
                     $activityTask = $execution->createWorkflowExecutionTask($childExecution, $decision->getControl());
@@ -387,11 +397,10 @@ class WorkflowServerWorker
                     break;
 
                 case Decision::TYPE_EXECUTION_FAILED:
-                    $execution->setState(WorkflowExecution::STATE_FAILED);
-
-                    if (isset($decision->attributes['reason'])) {
-                        $execution->setFailureReason($decision->attributes['reason']);
-                    }
+                    $execution->setFailed(
+                        $decision->getAttribute('reason')->getOrElse(null),
+                        $decision->getAttribute('details')->getOrElse(array())
+                    );
 
                     $em->persist($execution);
                     $em->flush();

@@ -21,7 +21,7 @@ class WorkflowExecutionTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($execution->createDecisionTaskIfPending(), 'Pending state was successfully reset.');
         $execution->getOpenDecisionTask()->get()->close();
 
-        $execution->setState(WorkflowExecution::STATE_SUCCEEDED);
+        $execution->setSucceeded();
         $this->assertNull($execution->scheduleDecisionTask(), 'Returns null if execution is closed.');
         $this->assertNull($execution->createDecisionTaskIfPending(), 'Returns null if execution is closed.');
     }
@@ -38,7 +38,7 @@ class WorkflowExecutionTest extends \PHPUnit_Framework_TestCase
 
         $this->assertNotNull($execution->createWorkflowExecutionTask($childExecution = new WorkflowExecution(new Workflow('foo', 'bar'), '')));
         $this->assertFalse($execution->isLastDecision());
-        $childExecution->setState(WorkflowExecution::STATE_SUCCEEDED);
+        $childExecution->setSucceeded();
         $this->assertTrue($execution->isLastDecision());
 
         $this->assertNotNull($execution->scheduleDecisionTask());

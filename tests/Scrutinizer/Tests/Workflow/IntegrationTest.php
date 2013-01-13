@@ -61,6 +61,28 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
     private $processes = array();
 
     /**
+     * @group cancel
+     */
+    public function testCancelExecution()
+    {
+        $this->startProcess('php Fixture/canceling_decider.php test_deciderqueue');
+
+        $rs = $this->client->startExecution('testflow', '');
+        $this->assertEquals(array('execution_id' => 1), $rs);
+
+        /** @var $execution WorkflowExecution */
+        $execution = $this->executionRepo->findOneBy(array('id' => 1));
+        $this->assertTrueWithin(5, function() use ($execution) {
+            $this->em->refresh($execution);
+
+            return $execution->isClosed();
+        });
+
+        $this->assertEquals(WorkflowExecution::STATE_CANCELED, $execution->getState());
+        $this->assertEquals(array('foo' => 'bar'), $execution->getCancelDetails());
+    }
+
+    /**
      * @group listing
      */
     public function testExecutionListing()

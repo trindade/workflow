@@ -38,12 +38,14 @@ class WorkflowExecution
     const STATE_FAILED = 'failed';
     const STATE_SUCCEEDED = 'succeeded';
     const STATE_TERMINATED = 'terminated';
+    const STATE_CANCELED = 'canceled';
 
     private static $stateTransitionMap = array(
-        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED, self::STATE_TERMINATED),
+        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED, self::STATE_TERMINATED, self::STATE_CANCELED),
         self::STATE_FAILED => array(),
         self::STATE_SUCCEEDED => array(),
         self::STATE_TERMINATED => array(),
+        self::STATE_CANCELED => array(),
     );
 
     /**
@@ -115,6 +117,12 @@ class WorkflowExecution
 
     /** @ORM\Column(type = "string", nullable = true) */
     private $failureReason;
+
+    /** @ORM\Column(type = "json_array", nullable = true) */
+    private $failureDetails = array();
+
+    /** @ORM\Column(type = "json_array", nullable = true) */
+    private $cancelDetails = array();
 
     /** @ORM\Column(type = "boolean") */
     private $pendingDecisionTask = false;
@@ -193,7 +201,7 @@ class WorkflowExecution
         return $this->state;
     }
 
-    public function setState($state)
+    private function setState($state)
     {
         if ($this->isClosed()) {
             throw new \RuntimeException(sprintf('%s is closed and cannot transition to "%s".', $this, $state));
@@ -368,14 +376,42 @@ class WorkflowExecution
         return $task;
     }
 
-    public function setFailureReason($reason)
+    public function setFailed($reason, array $details = array())
     {
+        $this->setState(self::STATE_FAILED);
         $this->failureReason = $reason;
+        $this->failureDetails = $details;
+    }
+
+    public function setSucceeded()
+    {
+        $this->setState(self::STATE_SUCCEEDED);
+    }
+
+    public function setCanceled(array $details = array())
+    {
+        $this->setState(self::STATE_CANCELED);
+        $this->cancelDetails = $details;
+    }
+
+    public function setTerminated()
+    {
+        $this->setState(self::STATE_TERMINATED);
     }
 
     public function getFailureReason()
     {
         return $this->failureReason;
+    }
+
+    public function getFailureDetails()
+    {
+        return $this->failureDetails;
+    }
+
+    public function getCancelDetails()
+    {
+        return $this->cancelDetails;
     }
 
     public function __toString()

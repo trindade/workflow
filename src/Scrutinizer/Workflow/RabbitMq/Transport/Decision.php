@@ -19,6 +19,8 @@
 namespace Scrutinizer\Workflow\RabbitMq\Transport;
 
 use JMS\Serializer\Annotation as Serializer;
+use PhpOption\None;
+use PhpOption\Some;
 
 class Decision
 {
@@ -26,6 +28,7 @@ class Decision
     const TYPE_EXECUTION_SUCCEEDED = 'execution_succeeded';
     const TYPE_SCHEDULE_ACTIVITY = 'schedule_activity';
     const TYPE_SCHEDULE_CHILD_WORKFLOW = 'schedule_child_workflow';
+    const TYPE_EXECUTION_CANCELED = 'execution_canceled';
 
     /** @Serializer\Type("string") */
     public $type;
@@ -36,6 +39,15 @@ class Decision
     public function getControl()
     {
         return isset($this->attributes['control']) ? $this->attributes['control'] : array();
+    }
+
+    public function getAttribute($key)
+    {
+        if (isset($this->attributes[$key])) {
+            return new Some($this->attributes[$key]);
+        }
+
+        return None::create();
     }
 
     public function getInput()
