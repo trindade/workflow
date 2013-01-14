@@ -48,6 +48,11 @@ class DecisionTask extends AbstractTask
         return $this->state === self::STATE_CLOSED;
     }
 
+    public function getState()
+    {
+        return $this->state;
+    }
+
     public function getType()
     {
         return 'decision';
