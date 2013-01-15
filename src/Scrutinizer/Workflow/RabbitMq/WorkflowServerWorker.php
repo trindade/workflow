@@ -319,7 +319,7 @@ class WorkflowServerWorker
         $decisionTask = $execution->getOpenDecisionTask()->get();
         $decisionTask->close();
 
-        $this->dispatchEvent($builder, $execution, 'execution.new_decision', array('nb_decisions' => count($decisionResponse->decisions), 'task_id' => $decisionTask->getId()));
+        $this->dispatchEvent($builder, $execution, 'execution.new_decision', array('nb_decisions' => count($decisionResponse->decisions), 'task_id' => (string) $decisionTask->getId()));
 
         $em->persist($execution);
         $em->flush();
@@ -372,8 +372,8 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.new_child_execution', array(
-                        'task_id' => $activityTask->getId(),
-                        'child_execution_id' => $childExecution->getId()
+                        'task_id' => (string) $activityTask->getId(),
+                        'child_execution_id' => (string) $childExecution->getId()
                     ));
                     $this->dispatchExecutionStarted($builder, $childExecution, $childDecisionTask);
                     $this->dispatchDecisionTask($builder, $childExecution, $childDecisionTask);
@@ -398,7 +398,7 @@ class WorkflowServerWorker
                     );
                     $builder->queueMessage($activityMessage, '', $activityTask->getActivityType()->getQueueName());
 
-                    $this->dispatchEvent($builder, $execution, 'execution.new_activity_task', array('task_id' => $activityTask->getId()));
+                    $this->dispatchEvent($builder, $execution, 'execution.new_activity_task', array('task_id' => (string) $activityTask->getId()));
 
                     break;
 
@@ -425,7 +425,7 @@ class WorkflowServerWorker
             $em->persist($execution);
             $em->flush();
 
-            $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => $newDecisionTask->getId()));
+            $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => (string) $newDecisionTask->getId()));
             $this->dispatchDecisionTask($builder, $execution, $newDecisionTask);
         }
     }
@@ -439,8 +439,8 @@ class WorkflowServerWorker
         $parentExecution = $parentTask->getWorkflowExecution();
 
         $this->dispatchEvent($builder, $parentExecution, 'execution.child_execution_result', array(
-            'task_id' => $parentTask->getId(),
-            'child_execution_id' => $execution->getId(),
+            'task_id' => (string) $parentTask->getId(),
+            'child_execution_id' => (string) $execution->getId(),
             'child_execution_state' => $execution->getState(),
         ));
 
@@ -450,7 +450,7 @@ class WorkflowServerWorker
         $em->flush();
 
         if (null !== $parentDecisionTask) {
-            $this->dispatchEvent($builder, $parentExecution, 'execution.new_decision_task', array('task_id' => $parentDecisionTask->getId()));
+            $this->dispatchEvent($builder, $parentExecution, 'execution.new_decision_task', array('task_id' => (string) $parentDecisionTask->getId()));
             $this->dispatchDecisionTask($builder, $parentExecution, $parentDecisionTask);
         }
     }
@@ -468,7 +468,7 @@ class WorkflowServerWorker
         $activityTask = $execution->getActivityTaskWithId($activityResult->taskId)->get();
         $this->dispatchEvent($builder, $execution, 'execution.new_activity_result', array(
             'status' => $activityResult->status,
-            'task_id' => $activityTask->getId()
+            'task_id' => (string) $activityTask->getId()
         ));
 
         switch ($activityResult->status) {
@@ -489,7 +489,7 @@ class WorkflowServerWorker
         $em->flush();
 
         if (null !== $decisionTask) {
-            $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => $decisionTask->getId()));
+            $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => (string) $decisionTask->getId()));
             $this->dispatchDecisionTask($builder, $execution, $decisionTask);
         }
     }
@@ -518,7 +518,7 @@ class WorkflowServerWorker
     private function dispatchExecutionStarted(ResponseBuilder $builder, WorkflowExecution $execution, DecisionTask $task)
     {
         $this->dispatchEvent($builder, $execution, 'execution.started');
-        $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => $task->getId()));
+        $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => (string) $task->getId()));
     }
 
     private function dispatchEvent(ResponseBuilder $builder = null, WorkflowExecution $execution, $name, array $attributes = array())
@@ -536,7 +536,12 @@ class WorkflowServerWorker
         ));
 
         $publishArgs = array(
-            new AMQPMessage($this->serialize(new Event($execution, $name, $attributes), array('Default', 'Details'))),
+            new AMQPMessage(
+                $this->serialize(new Event($execution, $name, $attributes), array('Default', 'Details')),
+                array(
+                    'delivery_mode' => 2,
+                )
+            ),
             'workflow_events',
             $name
         );
