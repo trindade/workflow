@@ -36,6 +36,7 @@ use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Scrutinizer\Workflow\Model\Event;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
+use Scrutinizer\Workflow\RabbitMq\WorkflowServerWorker;
 use Symfony\Component\Process\Process;
 
 class IntegrationTest extends \PHPUnit_Framework_TestCase
@@ -59,6 +60,22 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
     private $executionRepo;
 
     private $processes = array();
+
+    /**
+     * @group garbage-collection
+     */
+    public function testGarbageCollection()
+    {
+        $rs = $this->client->startExecution('testflow', 'bar', array(), 1);
+
+        sleep(2);
+
+        $server = new WorkflowServerWorker($this->amqpCon, $this->registry, $this->serializer);
+        $server->collectGarbage();
+
+        $execution = $this->executionRepo->findOneBy(array('id' => $rs['execution_id']));
+        $this->assertEquals(WorkflowExecution::STATE_TIMED_OUT, $execution->getState());
+    }
 
     /**
      * @group cancel

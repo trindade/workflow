@@ -38,6 +38,7 @@ use Scrutinizer\Workflow\Model\ActivityType;
 use Scrutinizer\Workflow\Model\DecisionTask;
 use Scrutinizer\Workflow\Model\Event;
 use Scrutinizer\Workflow\Model\LogEntry;
+use Scrutinizer\Workflow\Model\Repository\WorkflowExecutionRepository;
 use Scrutinizer\Workflow\Model\Workflow;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\ActivityResult;
@@ -430,7 +431,7 @@ class WorkflowServerWorker
         }
     }
 
-    private function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
+    public function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
     {
         if (null === $parentTask = $execution->getParentWorkflowExecutionTask()) {
             return;
@@ -494,6 +495,59 @@ class WorkflowServerWorker
         }
     }
 
+    public function collectGarbage()
+    {
+        /** @var $em EntityManager */
+        $em = $this->registry->getManager();
+        $con = $em->getConnection();
+
+        switch ($dbPlatform = $con->getDatabasePlatform()->getName()) {
+            case 'mysql':
+                $sql = 'SELECT id FROM workflow_executions e
+                        WHERE
+                            e.state = "'.WorkflowExecution::STATE_OPEN.'"
+                            AND
+                            DATE_ADD(e.createdAt, INTERVAL e.maxRuntime SECOND) < :now
+                        ';
+                break;
+
+            default:
+                throw new \LogicException(sprintf('Unsupported database platform "%s".', $dbPlatform));
+        }
+
+        $executionIds = $con->executeQuery($sql, array('now' => new \DateTime()), array('now' => \Doctrine\DBAL\Types\Type::DATETIME));
+
+        /** @var $executionRepo WorkflowExecutionRepository */
+        $executionRepo = $em->getRepository('Workflow:WorkflowExecution');
+
+        foreach ($executionIds as $data) {
+            $con->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+            $con->beginTransaction();
+            try {
+                $builder = new ResponseBuilder();
+                $execution = $executionRepo->getByIdExclusive($data['id']);
+                $execution->setTimedOut();
+
+                $this->dispatchEvent($builder, $execution, 'execution.timed_out');
+                $this->updateParentExecution($builder, $em, $execution);
+
+                $em->persist($execution);
+                $em->flush();
+
+                $con->commit();
+
+                foreach ($builder->getMessages() as $messageParams) {
+                    call_user_func_array(array($this->channel, 'basic_publish'), $messageParams);
+                }
+
+            } catch (\Exception $ex) {
+                $con->rollBack();
+
+                throw $ex;
+            }
+        }
+    }
+
     public function run()
     {
         while (count($this->channel->callbacks) > 0) {
@@ -521,7 +575,7 @@ class WorkflowServerWorker
         $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => (string) $task->getId()));
     }
 
-    private function dispatchEvent(ResponseBuilder $builder = null, WorkflowExecution $execution, $name, array $attributes = array())
+    public function dispatchEvent(ResponseBuilder $builder = null, WorkflowExecution $execution, $name, array $attributes = array())
     {
         /** @var $con Connection */
         $con = $this->registry->getConnection();

@@ -39,13 +39,15 @@ class WorkflowExecution
     const STATE_SUCCEEDED = 'succeeded';
     const STATE_TERMINATED = 'terminated';
     const STATE_CANCELED = 'canceled';
+    const STATE_TIMED_OUT = 'timed_out';
 
     private static $stateTransitionMap = array(
-        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED, self::STATE_TERMINATED, self::STATE_CANCELED),
+        self::STATE_OPEN => array(self::STATE_FAILED, self::STATE_SUCCEEDED, self::STATE_TERMINATED, self::STATE_CANCELED, self::STATE_TIMED_OUT),
         self::STATE_FAILED => array(),
         self::STATE_SUCCEEDED => array(),
         self::STATE_TERMINATED => array(),
         self::STATE_CANCELED => array(),
+        self::STATE_TIMED_OUT => array(),
     );
 
     /**
@@ -392,6 +394,11 @@ class WorkflowExecution
     {
         $this->setState(self::STATE_CANCELED);
         $this->cancelDetails = $details;
+    }
+
+    public function setTimedOut()
+    {
+        $this->setState(self::STATE_TIMED_OUT);
     }
 
     public function setTerminated()
