@@ -24,6 +24,7 @@ use Doctrine\DBAL\Migrations\Configuration\Configuration;
 use Doctrine\DBAL\Migrations\Tools\Console\Command\AbstractCommand;
 use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
 use Doctrine\ORM\Tools\Console\Helper\EntityManagerHelper;
+use Scrutinizer\Workflow\Command\GarbageCollectCommand;
 use Scrutinizer\Workflow\Command\ServerRunCommand;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Symfony\Component\Console\Application;
@@ -54,6 +55,7 @@ class CliApp extends Application
     {
         $commands = parent::getDefaultCommands();
         $commands[] = new ServerRunCommand();
+        $commands[] = new GarbageCollectCommand();
 
         $this->getHelperSet()->set(new EntityManagerHelper($this->registry->getManager()), 'em');
 
