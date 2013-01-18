@@ -467,10 +467,6 @@ class WorkflowServerWorker
 
         /** @var $activityTask ActivityTask */
         $activityTask = $execution->getActivityTaskWithId($activityResult->taskId)->get();
-        $this->dispatchEvent($builder, $execution, 'execution.new_activity_result', array(
-            'status' => $activityResult->status,
-            'task_id' => (string) $activityTask->getId()
-        ));
 
         switch ($activityResult->status) {
             case ActivityResult::STATUS_SUCCESS:
@@ -484,6 +480,11 @@ class WorkflowServerWorker
             default:
                 throw new \LogicException(sprintf('Unknown activity status "%s".', $activityResult->status));
         }
+
+        $this->dispatchEvent($builder, $execution, 'execution.new_activity_result', array(
+            'status' => $activityResult->status,
+            'task_id' => (string) $activityTask->getId()
+        ));
 
         $decisionTask = $execution->scheduleDecisionTask();
         $em->persist($execution);
