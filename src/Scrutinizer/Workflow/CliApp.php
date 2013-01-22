@@ -61,10 +61,11 @@ class CliApp extends Application
 
         // Add Migration commands
         $migrationConfig = new Configuration($this->registry->getConnection());
-        $migrationConfig->setMigrationsDirectory(__DIR__.'/../../../res/migrations');
+        $migrationConfig->setMigrationsDirectory($migrationsDir = __DIR__.'/../../../res/migrations');
         $migrationConfig->setMigrationsNamespace('Scrutinizer\Workflow\Migrations');
         $migrationConfig->setMigrationsTableName('workflow_migrations');
         $migrationConfig->setName('workflow_migrations');
+        $migrationConfig->registerMigrationsFromDirectory($migrationsDir);
         foreach (new \DirectoryIterator(__DIR__.'/../../../vendor/doctrine/migrations/lib/Doctrine/DBAL/Migrations/Tools/Console/Command') as $file) {
             /** @var $file \SplFileInfo */
 
