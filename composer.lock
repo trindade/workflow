@@ -342,12 +342,12 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/schmittjoh/serializer",
-                "reference": "a9f31006191f3152884320b559e62b20438cdb76"
+                "reference": "68b5a27518d22188f6f42afaf7fc821419841f49"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/schmittjoh/serializer/archive/a9f31006191f3152884320b559e62b20438cdb76.zip",
-                "reference": "a9f31006191f3152884320b559e62b20438cdb76",
+                "url": "https://github.com/schmittjoh/serializer/archive/68b5a27518d22188f6f42afaf7fc821419841f49.zip",
+                "reference": "68b5a27518d22188f6f42afaf7fc821419841f49",
                 "shasum": ""
             },
             "require": {
@@ -369,7 +369,7 @@
             "suggest": {
                 "symfony/yaml": "Required if you'd like to serialize data to YAML format."
             },
-            "time": "2013-01-12 12:15:40",
+            "time": "2013-01-22 10:24:33",
             "type": "library",
             "extra": {
                 "branch-alias": {
@@ -511,26 +511,26 @@
         },
         {
             "name": "phpoption/phpoption",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "git://github.com/schmittjoh/php-option",
-                "reference": "1.0.0"
+                "reference": "1.1.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/schmittjoh/php-option/archive/1.0.0.zip",
-                "reference": "1.0.0",
+                "url": "https://github.com/schmittjoh/php-option/archive/1.1.0.zip",
+                "reference": "1.1.0",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0"
             },
-            "time": "2012-11-18 14:14:12",
+            "time": "2013-01-19 11:01:32",
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.0-dev"
+                    "dev-master": "1.1-dev"
                 }
             },
             "autoload": {
@@ -623,23 +623,23 @@
         },
         {
             "name": "symfony/console",
-            "version": "v2.1.6",
+            "version": "v2.1.7",
             "target-dir": "Symfony/Component/Console",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Console",
-                "reference": "v2.1.6"
+                "reference": "v2.1.7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/symfony/Console/archive/v2.1.6.zip",
-                "reference": "v2.1.6",
+                "url": "https://github.com/symfony/Console/archive/v2.1.7.zip",
+                "reference": "v2.1.7",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.3"
             },
-            "time": "2012-12-13 17:42:00",
+            "time": "2013-01-17 15:20:05",
             "type": "library",
             "autoload": {
                 "psr-0": {
@@ -665,23 +665,23 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v2.1.6",
+            "version": "v2.1.7",
             "target-dir": "Symfony/Component/Yaml",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Yaml",
-                "reference": "v2.1.6"
+                "reference": "v2.1.7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/symfony/Yaml/archive/v2.1.6.zip",
-                "reference": "v2.1.6",
+                "url": "https://github.com/symfony/Yaml/archive/v2.1.7.zip",
+                "reference": "v2.1.7",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.3"
             },
-            "time": "2012-12-06 10:00:55",
+            "time": "2013-01-17 21:21:51",
             "type": "library",
             "autoload": {
                 "psr-0": {
@@ -711,18 +711,18 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/videlalvaro/php-amqplib.git",
-                "reference": "v1.2.1"
+                "reference": "6cfbd9f2e687c8d72f7f99ad3b27beedccba9f55"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/videlalvaro/php-amqplib/archive/v1.2.1.zip",
-                "reference": "v1.2.1",
+                "url": "https://github.com/videlalvaro/php-amqplib/archive/6cfbd9f2e687c8d72f7f99ad3b27beedccba9f55.zip",
+                "reference": "6cfbd9f2e687c8d72f7f99ad3b27beedccba9f55",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0"
             },
-            "time": "2013-01-15 15:34:44",
+            "time": "2013-01-17 15:16:48",
             "type": "library",
             "autoload": {
                 "psr-0": {
@@ -730,6 +730,9 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "LGPL-2.1"
+            ],
             "authors": [
                 {
                     "name": "Alvaro Videla"
@@ -806,7 +809,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "5b5e584fe8094b23463902106e205e61aa78529a"
+                "reference": "825a85bf996d6264b14fc10dcd233eb57a36c388"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -814,7 +817,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-15 19:02:55",
+            "time": "2013-01-22 10:51:41",
             "type": "library",
             "autoload": {
                 "psr-0": {
@@ -824,23 +827,23 @@
         },
         {
             "name": "symfony/process",
-            "version": "v2.1.6",
+            "version": "v2.1.7",
             "target-dir": "Symfony/Component/Process",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Process",
-                "reference": "v2.1.6"
+                "reference": "v2.1.7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/symfony/Process/archive/v2.1.6.zip",
-                "reference": "v2.1.6",
+                "url": "https://github.com/symfony/Process/archive/v2.1.7.zip",
+                "reference": "v2.1.7",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.3"
             },
-            "time": "2012-12-19 13:27:19",
+            "time": "2013-01-16 09:27:54",
             "type": "library",
             "autoload": {
                 "psr-0": {
