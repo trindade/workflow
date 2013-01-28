@@ -1,9 +1,12 @@
 database:
     driver: pdo_mysql
     host: localhost
-    user: root
-    password: ''
     dbname: scrutinizer_workflow
+    user: root
+    password: ~
+    port: ~
+    unix_socket: ~
+    charset: utf8
 
 # This can be set to "test", or any other value. We require a special environment for running
 # unit tests just to make sure that tests are not mistakenly run on a production deployment
