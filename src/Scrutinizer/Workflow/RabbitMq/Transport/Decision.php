@@ -29,6 +29,7 @@ class Decision
     const TYPE_SCHEDULE_ACTIVITY = 'schedule_activity';
     const TYPE_SCHEDULE_CHILD_WORKFLOW = 'schedule_child_workflow';
     const TYPE_EXECUTION_CANCELED = 'execution_canceled';
+    const TYPE_ADOPT_EXECUTION = 'adopt_execution';
 
     /** @Serializer\Type("string") */
     public $type;

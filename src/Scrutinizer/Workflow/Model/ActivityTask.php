@@ -105,6 +105,16 @@ class ActivityTask extends AbstractActivityTask
         return ! $this->isOpen();
     }
 
+    public function getFailureReason()
+    {
+        return $this->failureReason;
+    }
+
+    public function getFailureException()
+    {
+        return $this->failureException;
+    }
+
     public function setFailureDetails($reason, array $exception = null)
     {
         $this->state = self::STATE_FAILED;

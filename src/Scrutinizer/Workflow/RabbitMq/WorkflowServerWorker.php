@@ -35,12 +35,14 @@ use Scrutinizer\RabbitMQ\Rpc\RpcError;
 use Scrutinizer\Workflow\Model\AbstractTask;
 use Scrutinizer\Workflow\Model\ActivityTask;
 use Scrutinizer\Workflow\Model\ActivityType;
+use Scrutinizer\Workflow\Model\AdoptionTask;
 use Scrutinizer\Workflow\Model\DecisionTask;
 use Scrutinizer\Workflow\Model\Event;
 use Scrutinizer\Workflow\Model\LogEntry;
 use Scrutinizer\Workflow\Model\Repository\WorkflowExecutionRepository;
 use Scrutinizer\Workflow\Model\Workflow;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
+use Scrutinizer\Workflow\Model\WorkflowExecutionTask;
 use Scrutinizer\Workflow\RabbitMq\Transport\ActivityResult;
 use Scrutinizer\Workflow\RabbitMq\Transport\CreateActivityType;
 use Scrutinizer\Workflow\RabbitMq\Transport\CreateWorkflowType;
@@ -51,6 +53,16 @@ use Scrutinizer\Workflow\RabbitMq\Transport\SearchWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\StartWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\TerminateWorkflowExecution;
 
+/**
+ * Server Worker.
+ *
+ * Processes messages sent by clients, schedules new tasks, keeps track of execution state, etc.
+ *
+ * This class has been designed for concurrency; you can run as many workers as you need to handle the amount of
+ * messages in your system.
+ *
+ * @author Johannes M. Schmitt <schmittjoh@gmail.com>
+ */
 class WorkflowServerWorker
 {
     private $con;
@@ -77,6 +89,7 @@ class WorkflowServerWorker
             'workflow_activity_result' => 'consumeActivityResult',
             'workflow_type' => 'consumeWorkflowType',
             'workflow_activity_type' => 'consumeActivityType',
+            'workflow_adoption_request' => 'consumeAdoptionRequest', // Internal Queue.
         );
         foreach ($queuesToMethods as $queueName => $methodName) {
             $this->channel->queue_declare($queueName, false, true, false, false);
@@ -85,6 +98,11 @@ class WorkflowServerWorker
 
         $this->channel->exchange_declare('workflow_log', 'topic');
         $this->channel->exchange_declare('workflow_events', 'topic');
+
+        $dbCon = $this->registry->getConnection();
+        if (false === $dbCon->query("SELECT id FROM workflow_execution_lock")->fetchColumn()) {
+            $dbCon->exec("INSERT INTO workflow_execution_lock (id) VALUES (1)");
+        }
     }
 
     /**
@@ -238,12 +256,18 @@ class WorkflowServerWorker
         $execution = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusive($terminateExecution->executionId);
         $builder->setWorkflowExecution($execution);
 
+        $this->terminateExecution($builder, $em, $execution);
+    }
+
+    private function terminateExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
+    {
         $execution->setTerminated();
         $em->persist($execution);
         $em->flush();
 
         $this->dispatchEvent($builder, $execution, 'execution.terminated');
-        $this->updateParentExecution($builder, $em, $execution);
+        $this->updateParentExecutions($builder, $em, $execution);
+        $this->updateChildExecutions($builder, $em, $execution);
     }
 
     private function consumeWorkflowType(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
@@ -282,6 +306,102 @@ class WorkflowServerWorker
         }
     }
 
+    private function consumeAdoptionRequest(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
+    {
+        /** @var $adoptionRequest Transport\AdoptionRequest */
+        $adoptionRequest = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\AdoptionRequest');
+
+        list($parentExecution, $childExecution) = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusiveForAdoption(
+            $adoptionRequest->parentExecutionId,
+            $adoptionRequest->childExecutionId
+        );
+
+        /**
+         * @var $parentExecution WorkflowExecution
+         * @var $childExecution WorkflowExecution
+         */
+
+        /** @var $adoptionTask AdoptionTask */
+        $adoptionTask = $em->createQuery("SELECT t FROM Workflow:AdoptionTask t WHERE t.id = :id")
+            ->setParameter('id', $adoptionRequest->taskId)
+            ->getSingleResult();
+
+        if ($adoptionTask->getChildWorkflowExecution() !== $childExecution) {
+            throw new \LogicException(sprintf('%s does not belong to %s.', $childExecution, $adoptionTask));
+        }
+        if ($adoptionTask->getWorkflowExecution() !== $parentExecution) {
+            throw new \LogicException(sprintf('%s does not belong to %s.', $parentExecution, $adoptionTask));
+        }
+
+        // Verify that we are not creating a cyclic graph, but maintain the tree structure. That is, the elected child
+        // must not be an ancestor of the parent execution. We start with the parent execution, and perform a BFS. None
+        // of the traversed nodes may be the selected child.
+        $ancestors = array();
+        $ancestor = $parentExecution;
+        do {
+            /** @var $ancestor WorkflowExecution */
+            if ($ancestor === $childExecution) {
+                $adoptionTask->setFailed('The child execution cannot be an ancestor of the parent execution.');
+                break;
+            }
+
+            foreach ($ancestor->getParentWorkflowExecutionTasks() as $parentTask) {
+                /** @var $parentTask WorkflowExecutionTask */
+                $ancestors[] = $parentTask->getWorkflowExecution();
+            }
+
+            $ancestors = array_merge($ancestors, $ancestor->getParentWorkflowExecutionTasks()->map(function(WorkflowExecutionTask $task) {
+                return $task->getWorkflowExecution();
+            })->toArray());
+        } while ($ancestor = array_shift($ancestors));
+
+        // Verify that we have not already adopted the selected execution.
+        if ($adoptionTask->isOpen()) {
+            foreach ($parentExecution->getTasks() as $parentTask) {
+                if ( ! $parentTask instanceof WorkflowExecutionTask) {
+                    continue;
+                }
+
+                if ($parentTask->getChildWorkflowExecution() === $childExecution) {
+                    $adoptionTask->setFailed('The child execution has already been adopted.');
+                    break;
+                }
+            }
+        }
+
+        if ($adoptionTask->isOpen()) {
+            $adoptionTask->setSucceeded();
+            $workflowExecutionTask = $parentExecution->createWorkflowExecutionTask($childExecution);
+
+            $em->persist($parentExecution);
+            $em->flush();
+
+            $this->dispatchEvent($builder, $parentExecution, 'execution.new_adoption_result', array(
+                'task_id' => (string) $adoptionTask->getId(),
+            ));
+            $this->dispatchEvent($builder, $parentExecution, 'execution.child_execution_adopted', array(
+                'task_id' => (string) $workflowExecutionTask->getId(),
+            ));
+        } else {
+            $em->persist($parentExecution);
+            $em->flush();
+
+            $this->dispatchEvent($builder, $parentExecution, 'execution.new_adoption_result', array(
+                'task_id' => (string) $adoptionTask->getId(),
+            ));
+        }
+
+        if (null !== $newDecisionTask = $parentExecution->scheduleDecisionTask()) {
+            $em->persist($parentExecution);
+            $em->flush();
+
+            $this->dispatchEvent($builder, $parentExecution, 'execution.new_decision_task', array(
+                'task_id' => (string) $newDecisionTask->getId(),
+            ));
+            $this->dispatchDecisionTask($builder, $parentExecution, $newDecisionTask);
+        }
+    }
+
     private function consumeExecution(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
     {
         /** @var $executionData StartWorkflowExecution */
@@ -312,8 +432,11 @@ class WorkflowServerWorker
         /** @var $decisionResponse DecisionResponse */
         $decisionResponse = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\DecisionResponse');
 
+        /** @var $executionRepo WorkflowExecutionRepository */
+        $executionRepo = $em->getRepository('Workflow:WorkflowExecution');
+
         /** @var $execution WorkflowExecution */
-        $execution = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusive($decisionResponse->executionId);
+        $execution = $executionRepo->getByIdExclusive($decisionResponse->executionId);
         $builder->setWorkflowExecution($execution);
 
         /** @var $decisionTask DecisionTask */
@@ -345,7 +468,7 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.succeeded', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
 
                     break;
 
@@ -355,7 +478,36 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.canceled', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
+                    $this->updateChildExecutions($builder, $em, $execution);
+
+                    break;
+
+                case Decision::TYPE_ADOPT_EXECUTION:
+                    $childExecution = $executionRepo->getById($decision->attributes['execution_id']);
+                    $adoptionTask = $execution->createAdoptionTask($childExecution);
+
+                    $em->persist($execution);
+                    $em->flush();
+
+                    $this->dispatchEvent($builder, $execution, 'execution.new_adoption_task', array(
+                        'task_id' => (string) $adoptionTask->getId(),
+                        'child_execution_id' => (string) $childExecution->getId(),
+                    ));
+                    $builder->queueMessage(
+                        new AMQPMessage(
+                            json_encode(array(
+                                'parent_execution_id' => (string) $execution->getId(),
+                                'child_execution_id' => (string) $childExecution->getId(),
+                                'task_id' => (string) $adoptionTask->getId()
+                            )),
+                            array(
+                                'delivery_mode' => 2,
+                            )
+                        ),
+                        '',
+                        'workflow_adoption_request'
+                    );
 
                     break;
 
@@ -413,7 +565,7 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.failed', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
 
                     break;
 
@@ -431,12 +583,43 @@ class WorkflowServerWorker
         }
     }
 
-    public function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
+    private function updateChildExecutions(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
     {
-        if (null === $parentTask = $execution->getParentWorkflowExecutionTask()) {
-            return;
-        }
+        foreach ($execution->getTasks() as $task) {
+            if ( ! $task instanceof WorkflowExecutionTask) {
+                continue;
+            }
 
+            if ($task->isClosed()) {
+                continue;
+            }
+
+            switch ($task->getChildPolicy()) {
+                case Workflow::CHILD_POLICY_ABANDON:
+                    break; // Just do nothing.
+
+                case Workflow::CHILD_POLICY_REQUEST_CANCEL:
+                    throw new \LogicException('REQUEST_CANCEL child policy is not yet implemented.');
+
+                case Workflow::CHILD_POLICY_TERMINATE:
+                    $this->terminateExecution($builder, $em, $task->getChildWorkflowExecution());
+                    break;
+
+                default:
+                    throw new \LogicException(sprintf('The child policy "%s" is unknown.', $task->getChildPolicy()));
+            }
+        }
+    }
+
+    private function updateParentExecutions(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
+    {
+        foreach ($execution->getParentWorkflowExecutionTasks() as $task) {
+            $this->updateParentExecution($builder, $em, $execution, $task);
+        }
+    }
+
+    private function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution, WorkflowExecutionTask $parentTask)
+    {
         $parentExecution = $parentTask->getWorkflowExecution();
 
         $this->dispatchEvent($builder, $parentExecution, 'execution.child_execution_result', array(
@@ -530,7 +713,7 @@ class WorkflowServerWorker
                 $execution->setTimedOut();
 
                 $this->dispatchEvent($builder, $execution, 'execution.timed_out');
-                $this->updateParentExecution($builder, $em, $execution);
+                $this->updateParentExecutions($builder, $em, $execution);
 
                 $em->persist($execution);
                 $em->flush();

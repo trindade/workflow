@@ -27,6 +27,10 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class Workflow
 {
+    const CHILD_POLICY_TERMINATE = 'terminate';
+    const CHILD_POLICY_REQUEST_CANCEL = 'request_cancel';
+    const CHILD_POLICY_ABANDON = 'abandon';
+
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) @ORM\Id @ORM\GeneratedValue(strategy = "AUTO") */
     private $id;
 

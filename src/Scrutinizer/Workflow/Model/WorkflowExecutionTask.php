@@ -10,16 +10,25 @@ use Doctrine\ORM\Mapping as ORM;
 class WorkflowExecutionTask extends AbstractActivityTask
 {
     /**
-     * @ORM\OneToOne(targetEntity = "WorkflowExecution", mappedBy="parentWorkflowExecutionTask", fetch = "EAGER", cascade = {"refresh", "persist"})
+     * @ORM\ManyToOne(targetEntity = "WorkflowExecution", inversedBy="parentWorkflowExecutionTasks", fetch = "EAGER", cascade = {"refresh", "persist"})
      */
     private $childWorkflowExecution;
 
-    public function __construct(WorkflowExecution $execution, WorkflowExecution $childExecution, array $control = array())
+    /** @ORM\Column(type = "string", length = 20) */
+    private $childPolicy;
+
+    public function __construct(WorkflowExecution $execution, WorkflowExecution $childExecution, array $control = array(), $childPolicy = Workflow::CHILD_POLICY_ABANDON)
     {
         parent::__construct($execution, $control);
 
         $this->childWorkflowExecution = $childExecution;
-        $this->childWorkflowExecution->setParentWorkflowExecutionTask($this);
+        $this->childWorkflowExecution->addParentWorkflowExecutionTask($this);
+        $this->childPolicy = $childPolicy;
+    }
+
+    public function getChildPolicy()
+    {
+        return $this->childPolicy;
     }
 
     public function getChildWorkflowExecution()

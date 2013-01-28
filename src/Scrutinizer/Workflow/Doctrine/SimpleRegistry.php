@@ -56,6 +56,7 @@ class SimpleRegistry extends AbstractManagerRegistry
         switch ($name) {
             case 'default_event_manager':
                 $service = new EventManager();
+                $service->addEventSubscriber(new LockListener());
                 break;
 
             case 'default_connection':

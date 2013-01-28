@@ -232,7 +232,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
 
         $log = file_get_contents($eventLog);
         unlink($eventLog);
-        $this->assertEquals($this->em->createQuery("SELECT COUNT(e) FROM Workflow:Event e")->getSingleScalarResult(), substr_count($log, "\n"));
+        $this->assertEquals($this->em->createQuery("SELECT COUNT(e) FROM Workflow:Event e")->getSingleScalarResult(), substr_count($log, "\n"), $this->getDebugInfo());
     }
 
     /**
@@ -299,6 +299,32 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($executions[0]->hasSucceeded(), $this->getDebugInfo());
         $this->assertTrue($executions[1]->hasSucceeded(), $this->getDebugInfo());
         $this->assertTrue($executions[2]->hasSucceeded(), $this->getDebugInfo());
+    }
+
+    /**
+     * @group adoption
+     */
+    public function testAdoptExecution()
+    {
+        $this->client->declareWorkflowType('adopting_workflow', 'adopting_workflow_decider');
+        $this->purgeQueue('adopting_workflow_decider');
+
+        $this->startProcess('php Fixture/successful_testflow_decider.php', __DIR__);
+        $this->startProcess('php Fixture/adopting_decider.php adopting_workflow_decider');
+
+        $testExecution = $this->client->startExecution('testflow', '');
+
+        /** @var $adoptingExecution WorkflowExecution */
+        $adoptingExecution = $this->executionRepo->findOneBy(array('id' => $this->client->startExecution('adopting_workflow', $testExecution['execution_id'])['execution_id']));
+
+        $this->assertTrueWithin(5, function() use ($adoptingExecution) {
+            $this->em->refresh($adoptingExecution);
+
+            return $adoptingExecution->isClosed();
+        });
+
+        $this->assertTrue($adoptingExecution->hasSucceeded());
+        $this->assertCount(4, $adoptingExecution->getTasks());
     }
 
     public static function setUpBeforeClass()
