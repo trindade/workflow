@@ -1,8 +1,8 @@
 # Scrutinizer Workflow
 
-Scrutinizer Workflow is a simple framework for implementing distributed workflows. Each workflow may consist of
-different tasks which are potentially run on different physical machines in different places around the world, and
-in different programming languages.
+Scrutinizer Workflow is a simple framework for implementing highly scalable, distributed workflows. Each workflow may 
+consist of different tasks which are potentially run on different physical machines in different places around the world,
+and in different programming languages.
 
 Features:
 
