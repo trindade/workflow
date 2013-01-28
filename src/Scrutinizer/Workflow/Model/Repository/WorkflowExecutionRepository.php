@@ -2,6 +2,7 @@
 
 namespace Scrutinizer\Workflow\Model\Repository;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityRepository;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 
@@ -22,8 +23,15 @@ class WorkflowExecutionRepository extends EntityRepository
      *
      * @return WorkflowExecution[]
      */
-    public function getAllByIdExclusive(array $ids)
+    public function getByIdExclusiveForAdoption($parentId, $childId)
     {
+        // Currently, we are being pretty gross here by simply locking the entire table down. This is necessary to
+        // preserve a consistent state when we change parents. In the future, we might want to explore more sophisticated
+        // algorithms to only lock down specific trees.
+        $con = $this->_em->getConnection();
+        $con->executeQuery("SELECT id FROM workflow_execution_lock ".$con->getDatabasePlatform()->getWriteLockSQL());
+
+        return array($this->getById($parentId), $this->getById($childId));
     }
 
     /**
@@ -46,17 +54,13 @@ class WorkflowExecutionRepository extends EntityRepository
      */
     public function getByIdExclusive($id)
     {
+        // Acquire a write lock for all trees that this execution is part of.
         $con = $this->_em->getConnection();
-
-        if ( ! is_numeric($id)) {
-            throw new \InvalidArgumentException(sprintf('$id must be numeric, but got "%s".', $id));
-        }
-
-
-        // Acquire a write lock for the parent execution.
-        $con->executeQuery("SELECT id FROM workflow_executions WHERE id = :id ".$con->getDatabasePlatform()->getWriteLockSQL(), array(
-            'id' => $parentId,
-        ));
+        $con->executeQuery(
+            "SELECT id FROM workflow_executions WHERE id IN (:ids) ".$con->getDatabasePlatform()->getWriteLockSQL(),
+            array('ids' => $this->getTopMostParents($id)),
+            array('ids' => Connection::PARAM_STR_ARRAY)
+        );
 
         // Load the actually requested workflow execution which might be different from the one that we locked above.
         return $this->getById($id);
@@ -73,20 +77,40 @@ class WorkflowExecutionRepository extends EntityRepository
     }
 
     /**
+     * Finds the tree roots from which the given id is reachable.
+     *
+     * We will lock all tree roots for modifying the given
+     *
      * @param string $id
      *
      * @return string[]
      */
     private function getTopMostParents($id)
     {
+        $con = $this->_em->getConnection();
+        $topMostIds = array();
 
-        while (false !== $newParentId = $con->query("SELECT t.workflowExecution_id
-                                                     FROM workflow_tasks t
-                                                     INNER JOIN workflow_executions e ON e.parentWorkflowExecutionTask_id = t.id
-                                                     WHERE e.id = ".$parentId)
-            ->fetchColumn()) {
-            $parentId = $newParentId;
+        // This ensures that there are no read operations when we are modifying parent relations in an adoption task.
+        $con->executeQuery("SELECT id FROM workflow_execution_lock ".$con->getDatabasePlatform()->getReadLockSQL());
+
+        $parentIds = array($id);
+        while ($parentId = array_shift($parentIds)) {
+            if (in_array($parentId, $topMostIds, true)) {
+                continue;
+            }
+
+            $newParentIds = $con->executeQuery("SELECT workflowExecution_id FROM workflow_tasks WHERE childWorkflowExecution_id = :id", array(
+                'id' => $parentId,
+            ))->fetchAll(\PDO::FETCH_COLUMN);
+
+            if (empty($newParentIds)) {
+                $topMostIds[] = $parentId;
+                continue;
+            }
+
+            $parentIds = array_merge($parentIds, $newParentIds);
         }
 
+        return $topMostIds;
     }
 }

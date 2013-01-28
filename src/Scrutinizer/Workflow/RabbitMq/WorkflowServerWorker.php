@@ -53,6 +53,16 @@ use Scrutinizer\Workflow\RabbitMq\Transport\SearchWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\StartWorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\Transport\TerminateWorkflowExecution;
 
+/**
+ * Server Worker.
+ *
+ * Processes messages sent by clients, schedules new tasks, keeps track of execution state, etc.
+ *
+ * This class has been designed for concurrency; you can run as many workers as you need to handle the amount of
+ * messages in your system.
+ *
+ * @author Johannes M. Schmitt <schmittjoh@gmail.com>
+ */
 class WorkflowServerWorker
 {
     private $con;
@@ -79,7 +89,7 @@ class WorkflowServerWorker
             'workflow_activity_result' => 'consumeActivityResult',
             'workflow_type' => 'consumeWorkflowType',
             'workflow_activity_type' => 'consumeActivityType',
-            'workflow_adoption_request' => 'consumeAdoptionRequest',
+            'workflow_adoption_request' => 'consumeAdoptionRequest', // Internal Queue.
         );
         foreach ($queuesToMethods as $queueName => $methodName) {
             $this->channel->queue_declare($queueName, false, true, false, false);
@@ -88,6 +98,11 @@ class WorkflowServerWorker
 
         $this->channel->exchange_declare('workflow_log', 'topic');
         $this->channel->exchange_declare('workflow_events', 'topic');
+
+        $dbCon = $this->registry->getConnection();
+        if (false === $dbCon->query("SELECT id FROM workflow_execution_lock")->fetchColumn()) {
+            $dbCon->exec("INSERT INTO workflow_execution_lock (id) VALUES (1)");
+        }
     }
 
     /**
@@ -251,7 +266,7 @@ class WorkflowServerWorker
         $em->flush();
 
         $this->dispatchEvent($builder, $execution, 'execution.terminated');
-        $this->updateParentExecution($builder, $em, $execution);
+        $this->updateParentExecutions($builder, $em, $execution);
         $this->updateChildExecutions($builder, $em, $execution);
     }
 
@@ -296,10 +311,10 @@ class WorkflowServerWorker
         /** @var $adoptionRequest Transport\AdoptionRequest */
         $adoptionRequest = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\AdoptionRequest');
 
-        list($parentExecution, $childExecution) = $em->getRepository('Workflow:WorkflowExecution')->getAllByIdExclusive([
+        list($parentExecution, $childExecution) = $em->getRepository('Workflow:WorkflowExecution')->getByIdExclusiveForAdoption(
             $adoptionRequest->parentExecutionId,
             $adoptionRequest->childExecutionId
-        ]);
+        );
 
         /**
          * @var $parentExecution WorkflowExecution
@@ -310,6 +325,13 @@ class WorkflowServerWorker
         $adoptionTask = $em->createQuery("SELECT t FROM Workflow:AdoptionTask t WHERE t.id = :id")
             ->setParameter('id', $adoptionRequest->taskId)
             ->getSingleResult();
+
+        if ($adoptionTask->getChildWorkflowExecution() !== $childExecution) {
+            throw new \LogicException(sprintf('%s does not belong to %s.', $childExecution, $adoptionTask));
+        }
+        if ($adoptionTask->getWorkflowExecution() !== $parentExecution) {
+            throw new \LogicException(sprintf('%s does not belong to %s.', $parentExecution, $adoptionTask));
+        }
 
         // Verify that we are not creating a cyclic graph, but maintain the tree structure. That is, the elected child
         // must not be an ancestor of the parent execution. We start with the parent execution, and perform a BFS. None
@@ -333,7 +355,22 @@ class WorkflowServerWorker
             })->toArray());
         } while ($ancestor = array_shift($ancestors));
 
+        // Verify that we have not already adopted the selected execution.
         if ($adoptionTask->isOpen()) {
+            foreach ($parentExecution->getTasks() as $parentTask) {
+                if ( ! $parentTask instanceof WorkflowExecutionTask) {
+                    continue;
+                }
+
+                if ($parentTask->getChildWorkflowExecution() === $childExecution) {
+                    $adoptionTask->setFailed('The child execution has already been adopted.');
+                    break;
+                }
+            }
+        }
+
+        if ($adoptionTask->isOpen()) {
+            $adoptionTask->setSucceeded();
             $workflowExecutionTask = $parentExecution->createWorkflowExecutionTask($childExecution);
 
             $em->persist($parentExecution);
@@ -431,7 +468,7 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.succeeded', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
 
                     break;
 
@@ -441,7 +478,7 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.canceled', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
                     $this->updateChildExecutions($builder, $em, $execution);
 
                     break;
@@ -528,7 +565,7 @@ class WorkflowServerWorker
                     $em->flush();
 
                     $this->dispatchEvent($builder, $execution, 'execution.failed', array('decision_task_id' => $decisionTask->getId()));
-                    $this->updateParentExecution($builder, $em, $execution);
+                    $this->updateParentExecutions($builder, $em, $execution);
 
                     break;
 
@@ -574,12 +611,15 @@ class WorkflowServerWorker
         }
     }
 
-    public function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
+    private function updateParentExecutions(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution)
     {
-        if (null === $parentTask = $execution->getParentWorkflowExecutionTask()) {
-            return;
+        foreach ($execution->getParentWorkflowExecutionTasks() as $task) {
+            $this->updateParentExecution($builder, $em, $execution, $task);
         }
+    }
 
+    private function updateParentExecution(ResponseBuilder $builder, EntityManager $em, WorkflowExecution $execution, WorkflowExecutionTask $parentTask)
+    {
         $parentExecution = $parentTask->getWorkflowExecution();
 
         $this->dispatchEvent($builder, $parentExecution, 'execution.child_execution_result', array(
@@ -673,7 +713,7 @@ class WorkflowServerWorker
                 $execution->setTimedOut();
 
                 $this->dispatchEvent($builder, $execution, 'execution.timed_out');
-                $this->updateParentExecution($builder, $em, $execution);
+                $this->updateParentExecutions($builder, $em, $execution);
 
                 $em->persist($execution);
                 $em->flush();

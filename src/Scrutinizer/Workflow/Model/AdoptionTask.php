@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Entity
  * @author Johannes M. Schmitt <schmittjoh@gmail.com>
  */
-class AdoptionTask extends AbstractTask
+class AdoptionTask extends AbstractActivityTask
 {
     const STATE_OPEN = 'open';
     const STATE_SUCCEEDED = 'succeeded';
@@ -53,6 +53,7 @@ class AdoptionTask extends AbstractTask
             throw new \LogicException(sprintf('%s is not open anymore.', $this));
         }
 
+        $this->setFinished();
         $this->state = self::STATE_FAILED;
         $this->failureReason = $reason;
     }
@@ -63,6 +64,7 @@ class AdoptionTask extends AbstractTask
             throw new \LogicException(sprintf('%s is not open anymore.', $this));
         }
 
+        $this->setFinished();
         $this->state = self::STATE_SUCCEEDED;
     }
 
