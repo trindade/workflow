@@ -64,10 +64,10 @@ class WorkflowExecution
     private $workflow;
 
     /**
-     * @ORM\OneToOne(targetEntity = "WorkflowExecutionTask", inversedBy = "childWorkflowExecution")
+     * @ORM\OneToMany(targetEntity = "WorkflowExecutionTask", mappedBy = "childWorkflowExecution")
      * @var WorkflowExecutionTask
      */
-    private $parentWorkflowExecutionTask;
+    private $parentWorkflowExecutionTasks;
 
     /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
     private $maxRuntime;
@@ -147,6 +147,7 @@ class WorkflowExecution
         $this->createdAt = new \DateTime();
         $this->tasks = new ArrayCollection();
         $this->history = new ArrayCollection();
+        $this->parentWorkflowExecutionTasks = new ArrayCollection();
     }
 
     public function getId()
@@ -175,17 +176,14 @@ class WorkflowExecution
         return $this->workflow->getName();
     }
 
-    public function setParentWorkflowExecutionTask(WorkflowExecutionTask $task)
+    public function addParentWorkflowExecutionTask(WorkflowExecutionTask $task)
     {
-        $this->parentWorkflowExecutionTask = $task;
+        $this->parentWorkflowExecutionTasks->add($task);
     }
 
-    /**
-     * @return WorkflowExecutionTask|null
-     */
-    public function getParentWorkflowExecutionTask()
+    public function getParentWorkflowExecutionTasks()
     {
-        return $this->parentWorkflowExecutionTask;
+        return $this->parentWorkflowExecutionTasks;
     }
 
     public function getMaxRuntime()
@@ -216,8 +214,9 @@ class WorkflowExecution
         if (empty(self::$stateTransitionMap[$state])) {
             $this->finishedAt = new \DateTime();
 
-            if (null !== $this->parentWorkflowExecutionTask) {
-                $this->parentWorkflowExecutionTask->setFinished();
+            foreach ($this->parentWorkflowExecutionTasks as $parentTask) {
+                /** @var $parentTask WorkflowExecutionTask */
+                $parentTask->setFinished();
             }
         }
 
@@ -331,7 +330,7 @@ class WorkflowExecution
         // running decision task finishes. In case, that the workflow execution was terminated, we will not
         // schedule any new tasks, but just allow currently running activity tasks to report their results.
         if ( ! $this->isOpen()) {
-            return null;
+            return;
         }
 
         if ($this->getOpenDecisionTask()->isDefined()) {
@@ -373,6 +372,14 @@ class WorkflowExecution
     public function createWorkflowExecutionTask(WorkflowExecution $childExecution, array $controlData = array())
     {
         $task = new WorkflowExecutionTask($this, $childExecution, $controlData);
+        $this->tasks->add($task);
+
+        return $task;
+    }
+
+    public function createAdoptionTask(WorkflowExecution $childExecution)
+    {
+        $task = new AdoptionTask($this, $childExecution);
         $this->tasks->add($task);
 
         return $task;

@@ -18,6 +18,15 @@ class WorkflowExecutionRepository extends EntityRepository
     }
 
     /**
+     * @param string[] $ids
+     *
+     * @return WorkflowExecution[]
+     */
+    public function getAllByIdExclusive(array $ids)
+    {
+    }
+
+    /**
      * Retrieves a workflow execution for exclusive edit access.
      *
      * This method ensures that no other workers are allowed to edit this workflow execution, or one of its parent
@@ -43,14 +52,6 @@ class WorkflowExecutionRepository extends EntityRepository
             throw new \InvalidArgumentException(sprintf('$id must be numeric, but got "%s".', $id));
         }
 
-        $parentId = $id;
-        while (false !== $newParentId = $con->query("SELECT t.workflowExecution_id
-                                                     FROM workflow_tasks t
-                                                     INNER JOIN workflow_executions e ON e.parentWorkflowExecutionTask_id = t.id
-                                                     WHERE e.id = ".$parentId)
-                                            ->fetchColumn()) {
-            $parentId = $newParentId;
-        }
 
         // Acquire a write lock for the parent execution.
         $con->executeQuery("SELECT id FROM workflow_executions WHERE id = :id ".$con->getDatabasePlatform()->getWriteLockSQL(), array(
@@ -69,5 +70,23 @@ class WorkflowExecutionRepository extends EntityRepository
         }
 
         return $execution;
+    }
+
+    /**
+     * @param string $id
+     *
+     * @return string[]
+     */
+    private function getTopMostParents($id)
+    {
+
+        while (false !== $newParentId = $con->query("SELECT t.workflowExecution_id
+                                                     FROM workflow_tasks t
+                                                     INNER JOIN workflow_executions e ON e.parentWorkflowExecutionTask_id = t.id
+                                                     WHERE e.id = ".$parentId)
+            ->fetchColumn()) {
+            $parentId = $newParentId;
+        }
+
     }
 }

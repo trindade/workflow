@@ -31,6 +31,7 @@ use JMS\Serializer\Annotation as Serializer;
  *     "activity": "ActivityTask",
  *     "decision": "DecisionTask",
  *     "workflow_execution": "WorkflowExecutionTask",
+ *     "adoption": "AdoptionTask",
  * })
  */
 abstract class AbstractTask
