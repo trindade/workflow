@@ -28,6 +28,7 @@ class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
             'id' => (string) $execution->getId(),
             'state' => $execution->getState(),
             'workflow_name' => $execution->getWorkflowName(),
+            'input' => $execution->getInput(),
         );
     }
 }
