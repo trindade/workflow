@@ -2,8 +2,10 @@
 
 namespace Scrutinizer\Workflow\Command;
 
+use JMS\Serializer\Handler\HandlerRegistry;
 use JMS\Serializer\SerializerBuilder;
 use Scrutinizer\Workflow\RabbitMq\WorkflowServerWorker;
+use Scrutinizer\Workflow\Serializer\ChildWorkflowExecutionHandler;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -22,7 +24,7 @@ class GarbageCollectCommand extends AbstractCommand
         $server = new WorkflowServerWorker(
             $this->getAmqpConnection(),
             $this->registry,
-            SerializerBuilder::create()->build()
+            $this->getSerializer()
         );
         $server->collectGarbage();
     }

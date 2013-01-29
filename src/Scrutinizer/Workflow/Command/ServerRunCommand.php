@@ -46,7 +46,8 @@ class ServerRunCommand extends AbstractCommand
             ));
         }
 
-        $server = new WorkflowServerWorker($this->getAmqpConnection(), $this->registry, SerializerBuilder::create()->build(), $logger);
+        $server = new WorkflowServerWorker(
+            $this->getAmqpConnection(), $this->registry, $this->getSerializer(), $logger);
         $server->run();
     }
 }

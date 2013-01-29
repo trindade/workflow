@@ -19,10 +19,13 @@
 namespace Scrutinizer\Workflow\Command;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
+use JMS\Serializer\Handler\HandlerRegistry;
+use JMS\Serializer\SerializerBuilder;
 use Monolog\Handler\NullHandler;
 use Monolog\Logger;
 use Psr\Log\NullLogger;
 use Scrutinizer\RabbitMQ\Util\DsnUtils;
+use Scrutinizer\Workflow\Serializer\ChildWorkflowExecutionHandler;
 use Symfony\Component\Console\Command\Command;
 
 abstract class AbstractCommand extends Command
@@ -45,6 +48,17 @@ abstract class AbstractCommand extends Command
     protected function getAmqpConnection()
     {
         return DsnUtils::createCon($this->config['rabbitmq']['dsn']);
+    }
+
+    protected function getSerializer()
+    {
+        return SerializerBuilder::create()
+            ->addDefaultHandlers()
+            ->configureHandlers(function(HandlerRegistry $registry) {
+                $registry->registerSubscribingHandler(new ChildWorkflowExecutionHandler());
+            })
+            ->build()
+        ;
     }
 
     protected function getLogger()

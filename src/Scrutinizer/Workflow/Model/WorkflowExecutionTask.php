@@ -3,6 +3,7 @@
 namespace Scrutinizer\Workflow\Model;
 
 use Doctrine\ORM\Mapping as ORM;
+use JMS\Serializer\Annotation as Serializer;
 
 /**
  * @ORM\Entity
@@ -10,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 class WorkflowExecutionTask extends AbstractActivityTask
 {
     /**
+     * @Serializer\Type("ChildWorkflowExecution")
      * @ORM\ManyToOne(targetEntity = "WorkflowExecution", inversedBy="parentWorkflowExecutionTasks", fetch = "EAGER", cascade = {"refresh", "persist"})
      */
     private $childWorkflowExecution;

@@ -342,12 +342,12 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/schmittjoh/serializer",
-                "reference": "b491427df28d1992997f78ab80a34a163ac6552c"
+                "reference": "3982db57770f84d264c87674edd334e889b81cec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/schmittjoh/serializer/archive/b491427df28d1992997f78ab80a34a163ac6552c.zip",
-                "reference": "b491427df28d1992997f78ab80a34a163ac6552c",
+                "url": "https://github.com/schmittjoh/serializer/archive/3982db57770f84d264c87674edd334e889b81cec.zip",
+                "reference": "3982db57770f84d264c87674edd334e889b81cec",
                 "shasum": ""
             },
             "require": {
@@ -363,13 +363,13 @@
                 "symfony/yaml": "2.*",
                 "symfony/translation": ">=2.0,<2.2-dev",
                 "symfony/validator": ">=2.0,<2.2-dev",
-                "symfony/form": ">=2.0,<2.2-dev",
-                "symfony/filesystem": "2.*"
+                "symfony/filesystem": "2.*",
+                "symfony/form": ">=2.1,<2.2-dev"
             },
             "suggest": {
                 "symfony/yaml": "Required if you'd like to serialize data to YAML format."
             },
-            "time": "2013-01-24 21:54:46",
+            "time": "2013-01-28 16:45:30",
             "type": "library",
             "extra": {
                 "branch-alias": {
