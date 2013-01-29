@@ -372,6 +372,7 @@ class WorkflowServerWorker
         if ($adoptionTask->isOpen()) {
             $adoptionTask->setSucceeded();
             $workflowExecutionTask = $parentExecution->createWorkflowExecutionTask($childExecution);
+            $newDecisionTask = $parentExecution->scheduleDecisionTask();
 
             $em->persist($parentExecution);
             $em->flush();
@@ -383,6 +384,8 @@ class WorkflowServerWorker
                 'task_id' => (string) $workflowExecutionTask->getId(),
             ));
         } else {
+            $newDecisionTask = $parentExecution->scheduleDecisionTask();
+
             $em->persist($parentExecution);
             $em->flush();
 
@@ -391,10 +394,7 @@ class WorkflowServerWorker
             ));
         }
 
-        if (null !== $newDecisionTask = $parentExecution->scheduleDecisionTask()) {
-            $em->persist($parentExecution);
-            $em->flush();
-
+        if (null !== $newDecisionTask) {
             $this->dispatchEvent($builder, $parentExecution, 'execution.new_decision_task', array(
                 'task_id' => (string) $newDecisionTask->getId(),
             ));
