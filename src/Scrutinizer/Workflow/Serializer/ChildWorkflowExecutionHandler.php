@@ -10,6 +10,8 @@ use Scrutinizer\Workflow\Model\WorkflowExecution;
 
 class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
 {
+    private $depth = 0;
+
     public static function getSubscribingMethods()
     {
         return array(
@@ -22,13 +24,23 @@ class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
         );
     }
 
-    public function serializeToJson(JsonSerializationVisitor $visitor, WorkflowExecution $execution)
+    public function serializeToJson(JsonSerializationVisitor $visitor, WorkflowExecution $execution, array $type, NavigatorContext $context)
     {
-        return array(
-            'id' => (string) $execution->getId(),
-            'state' => $execution->getState(),
-            'workflow_name' => $execution->getWorkflowName(),
-            'input' => $execution->getInput(),
-        );
+        if ($this->depth > 0) {
+            return array(
+                'id' => (string) $execution->getId(),
+                'state' => $execution->getState(),
+                'workflow_name' => $execution->getWorkflowName(),
+                'input' => $execution->getInput(),
+            );
+        }
+
+        $this->depth += 1;
+        $context->stopVisiting($execution);
+        $rs = $visitor->getNavigator()->accept($execution, null, $visitor);
+        $context->startVisiting($execution);
+        $this->depth -= 1;
+
+        return $rs;
     }
 }
