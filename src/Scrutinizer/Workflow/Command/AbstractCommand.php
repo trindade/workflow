@@ -53,10 +53,10 @@ abstract class AbstractCommand extends Command
     protected function getSerializer()
     {
         return SerializerBuilder::create()
-            ->addDefaultHandlers()
             ->configureHandlers(function(HandlerRegistry $registry) {
                 $registry->registerSubscribingHandler(new ChildWorkflowExecutionHandler());
             })
+            ->addDefaultHandlers()
             ->build()
         ;
     }
