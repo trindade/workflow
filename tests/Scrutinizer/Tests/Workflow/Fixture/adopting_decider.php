@@ -25,12 +25,19 @@ $decider = new \Scrutinizer\Workflow\Client\Decider\SimpleCallableDecider(
         $adoptionTask = $execution->tasks->find(function(\Scrutinizer\Workflow\Client\Transport\AbstractTask $task) {
             return $task instanceof \Scrutinizer\Workflow\Client\Transport\AdoptionTask;
         });
+
         $executionTask = $execution->tasks->find(function(\Scrutinizer\Workflow\Client\Transport\AbstractTask $task) {
             return $task instanceof \Scrutinizer\Workflow\Client\Transport\WorkflowExecutionTask;
         });
 
         if ($adoptionTask->isDefined() && $executionTask->isDefined() && $executionTask->get()->isClosed()) {
-            $builder->succeedExecution();
+            if ( ! preg_match('/^adoption\.(.+)$/', $adoptionTask->get()->getName(), $match)) {
+                $builder->failExecution(sprintf('Adoption Task name was invalid, got "%s".', $adoptionTask->get()->getName()));
+            } elseif ($executionTask->get()->getName() !== $match[1]) {
+                $builder->failExecution(sprintf('Workflow name was "%s", but expected "%s".', $executionTask->get()->getName(), $match[1]));
+            } else {
+                $builder->succeedExecution();
+            }
         }
     }
 );

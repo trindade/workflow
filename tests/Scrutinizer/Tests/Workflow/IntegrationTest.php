@@ -323,8 +323,8 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
             return $adoptingExecution->isClosed();
         });
 
-        $this->assertTrue($adoptingExecution->hasSucceeded());
-        $this->assertCount(4, $adoptingExecution->getTasks());
+        $this->assertTrue($adoptingExecution->hasSucceeded(), $adoptingExecution->getFailureReason()."\n\n".$this->getDebugInfo());
+        $this->assertCount(4, $adoptingExecution->getTasks(), $this->getDebugInfo());
     }
 
     public static function setUpBeforeClass()
