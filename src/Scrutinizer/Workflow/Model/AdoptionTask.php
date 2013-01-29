@@ -3,6 +3,7 @@
 namespace Scrutinizer\Workflow\Model;
 
 use Doctrine\ORM\Mapping as ORM;
+use JMS\Serializer\Annotation as Serializer;
 
 /**
  * Represents an adoption request from a WorkflowExecution.
@@ -24,7 +25,7 @@ class AdoptionTask extends AbstractActivityTask
     /** @ORM\Column(type = "string", length = 30) */
     private $state = self::STATE_OPEN;
 
-    /** @ORM\ManyToOne(targetEntity = "WorkflowExecution") */
+    /** @ORM\ManyToOne(targetEntity = "WorkflowExecution") @Serializer\Type("ChildWorkflowExecution") */
     private $childWorkflowExecution;
 
     /** @ORM\Column(type = "string", nullable = true) */
