@@ -121,6 +121,8 @@ class ActivityTask extends AbstractActivityTask
         $this->setFinished();
         $this->failureReason = $reason;
         $this->failureException = $exception;
+
+        $this->onResult();
     }
 
     public function setResult($result)
@@ -128,10 +130,23 @@ class ActivityTask extends AbstractActivityTask
         $this->state = self::STATE_SUCCEEDED;
         $this->setFinished();
         $this->result = $result;
+
+        $this->onResult();
     }
 
     public function __toString()
     {
         return sprintf('ActivityTask(id = %d, state = %s)', $this->getId(), $this->state);
+    }
+
+    private function onResult()
+    {
+        $execution = $this->getWorkflowExecution();
+
+        $execution->addEvent('execution.new_activity_result', array(
+            'status' => $this->state,
+            'task_id' => (string) $this->getId()
+        ));
+        $execution->scheduleDecisionTask();
     }
 }

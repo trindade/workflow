@@ -32,10 +32,15 @@ class DecisionTask extends AbstractTask
     /** @ORM\Column(type = "string", length = 30) */
     private $state = self::STATE_OPEN;
 
-    public function close()
+    public function close($nbDecisions)
     {
         $this->state = self::STATE_CLOSED;
         $this->setFinished();
+
+        $this->getWorkflowExecution()->addEvent('execution.new_decision', array(
+            'nb_decisions' => $nbDecisions,
+            'task_id' => (string) $this->getId()
+        ));
     }
 
     public function isOpen()

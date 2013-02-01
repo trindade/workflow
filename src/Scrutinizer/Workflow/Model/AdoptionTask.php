@@ -56,6 +56,10 @@ class AdoptionTask extends AbstractActivityTask
         $this->setFinished();
         $this->state = self::STATE_FAILED;
         $this->failureReason = $reason;
+
+        $execution = $this->getWorkflowExecution();
+        $execution->addEvent('execution.new_adoption_result', array('task_id' => (string) $this->getId()));
+        $execution->scheduleDecisionTask();
     }
 
     public function setSucceeded()
@@ -66,6 +70,7 @@ class AdoptionTask extends AbstractActivityTask
 
         $this->setFinished();
         $this->state = self::STATE_SUCCEEDED;
+        $this->getWorkflowExecution()->scheduleDecisionTask();
     }
 
     public function isOpen()

@@ -148,6 +148,9 @@ class WorkflowExecution
         $this->tasks = new ArrayCollection();
         $this->history = new ArrayCollection();
         $this->parentWorkflowExecutionTasks = new ArrayCollection();
+
+        $this->history->add(new Event($this, 'execution.started'));
+        $this->scheduleDecisionTask();
     }
 
     public function getId()
@@ -318,8 +321,7 @@ class WorkflowExecution
         }
 
         $this->pendingDecisionTask = false;
-
-        return $this->createDecisionTask();
+        $this->createDecisionTask();
     }
 
     public function scheduleDecisionTask()
@@ -336,10 +338,10 @@ class WorkflowExecution
         if ($this->getOpenDecisionTask()->isDefined()) {
             $this->pendingDecisionTask = true;
 
-            return null;
+            return;
         }
 
-        return $this->createDecisionTask();
+        $this->createDecisionTask();
     }
 
     private function createDecisionTask()
@@ -350,8 +352,14 @@ class WorkflowExecution
 
         $task = new DecisionTask($this);
         $this->tasks->add($task);
+        $this->history->add(new Event($this, 'execution.new_decision_task', array('task_id' => $task)));
 
         return $task;
+    }
+
+    public function addEvent($name, array $attributes = array())
+    {
+        $this->history->add(new Event($this, $name, $attributes));
     }
 
     /**
@@ -382,6 +390,11 @@ class WorkflowExecution
         $task = new AdoptionTask($this, $childExecution);
         $this->tasks->add($task);
 
+        $this->addEvent('execution.new_adoption_task', array(
+            'task_id' => $task,
+            'child_execution_id' => (string) $childExecution->getId(),
+        ));
+
         return $task;
     }
 
@@ -395,12 +408,19 @@ class WorkflowExecution
     public function setSucceeded()
     {
         $this->setState(self::STATE_SUCCEEDED);
+
+        $this->addEvent('execution.succeeded');
+        $this->updateParents();
     }
 
     public function setCanceled(array $details = array())
     {
         $this->setState(self::STATE_CANCELED);
         $this->cancelDetails = $details;
+
+        $this->addEvent('execution.canceled');
+        $this->updateParents();
+        $this->updateChilds();
     }
 
     public function setTimedOut()
@@ -408,9 +428,12 @@ class WorkflowExecution
         $this->setState(self::STATE_TIMED_OUT);
     }
 
-    public function setTerminated()
+    public function terminate()
     {
         $this->setState(self::STATE_TERMINATED);
+        $this->history->add(new Event($this, 'execution.terminated'));
+        $this->updateParents();
+        $this->updateChilds();
     }
 
     public function getFailureReason()
@@ -431,5 +454,48 @@ class WorkflowExecution
     public function __toString()
     {
         return sprintf('WorkflowExecution(id=%d)', $this->id);
+    }
+
+    private function updateParents()
+    {
+        foreach ($this->parentWorkflowExecutionTasks as $task) {
+            /** @var $task WorkflowExecutionTask */
+
+            $parentExecution = $task->getWorkflowExecution();
+            $parentExecution->history->add(new Event($parentExecution, 'execution.child_execution_result', array(
+                'task_id' => (string) $task->getId(),
+                'child_execution_id' => (string) $this->id,
+                'child_execution_state' => $this->state,
+            )));
+            $parentExecution->scheduleDecisionTask();
+        }
+    }
+
+    private function updateChilds()
+    {
+        foreach ($this->tasks as $task) {
+            if ( ! $task instanceof WorkflowExecutionTask) {
+                continue;
+            }
+
+            if ($task->isClosed()) {
+                continue;
+            }
+
+            switch ($task->getChildPolicy()) {
+                case Workflow::CHILD_POLICY_ABANDON:
+                    break; // Just do nothing.
+
+                case Workflow::CHILD_POLICY_REQUEST_CANCEL:
+                    throw new \LogicException('REQUEST_CANCEL child policy is not yet implemented.');
+
+                case Workflow::CHILD_POLICY_TERMINATE:
+                    $task->getChildWorkflowExecution()->terminate();
+                    break;
+
+                default:
+                    throw new \LogicException(sprintf('The child policy "%s" is unknown.', $task->getChildPolicy()));
+            }
+        }
     }
 }

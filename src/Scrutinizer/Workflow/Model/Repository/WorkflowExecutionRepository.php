@@ -8,16 +8,6 @@ use Scrutinizer\Workflow\Model\WorkflowExecution;
 
 class WorkflowExecutionRepository extends EntityRepository
 {
-    public function build($workflowName, $input, $maxRuntime = 3600, array $tags = array())
-    {
-        return new WorkflowExecution(
-            $this->_em->getRepository('Workflow:Workflow')->getByName($workflowName),
-            $input,
-            $maxRuntime,
-            $this->_em->getRepository('Workflow:Tag')->getOrCreate($tags)
-        );
-    }
-
     /**
      * @param string[] $ids
      *
