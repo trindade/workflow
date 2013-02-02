@@ -329,7 +329,7 @@ class WorkflowServerWorker
 
         /** @var $activityTask ActivityTask */
         $activityTask = $execution->getActivityTaskWithId($startActivity->taskId)->get();
-        $activityTask->setExecutionDetails($startActivity->machineIdentfier, $startActivity->workerIdentifier);
+        $activityTask->setExecutionDetails($startActivity->machineIdentifier, $startActivity->workerIdentifier);
         $em->persist($execution);
         $em->flush();
 

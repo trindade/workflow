@@ -34,6 +34,8 @@ use Scrutinizer\RabbitMQ\Util\DsnUtils;
 use Scrutinizer\Workflow\Client\Serializer\TaskHandler;
 use Scrutinizer\Workflow\Client\WorkflowClient;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
+use Scrutinizer\Workflow\Model\AbstractTask;
+use Scrutinizer\Workflow\Model\ActivityTask;
 use Scrutinizer\Workflow\Model\Event;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 use Scrutinizer\Workflow\RabbitMq\WorkflowServerWorker;
@@ -228,6 +230,16 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
             $this->assertTrue($execution->hasSucceeded(), $this->getDebugInfo());
             $this->assertFalse($execution->hasOpenTasks(), $this->getDebugInfo());
             $this->assertCount(13, $execution->getTasks(), $this->getDebugInfo());
+
+            foreach ($execution->getTasks() as $task) {
+                if ( ! $task instanceof ActivityTask) {
+                    continue;
+                }
+
+                $this->assertNotNull($task->getStartedAt());
+                $this->assertEquals('machine', $task->getMachineIdentifier(), $this->getDebugInfo());
+                $this->assertEquals('worker', $task->getWorkerIdentifier(), $this->getDebugInfo());
+            }
         }
 
         $log = file_get_contents($eventLog);
@@ -340,6 +352,39 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(1, $details->tasks);
         $this->assertEquals('foo', $details->input);
         $this->assertCount(2, $details->history);
+    }
+
+    /**
+     * @group activity-cancel
+     */
+    public function testActivityIsCanceled()
+    {
+        $this->startProcess('php Fixture/complex_testflow_decider.php', __DIR__);
+
+        $testExecution = $this->client->startExecution('testflow', '');
+        sleep(3); // Let the decider schedule some activities.
+
+        $this->client->terminateExecution($testExecution['execution_id']);
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doA');
+        $this->startProcess('php Fixture/successful_activity_worker.php test_activity_doB');
+
+        sleep(3); // Activities should not be started anymore, but simply be canceled.
+
+        /** @var $execution WorkflowExecution */
+        $execution = $this->em->getRepository('Workflow:WorkflowExecution')->findOneBy(array('id' => $testExecution['execution_id']));
+
+        $eventNames = array('execution.started', 'execution.new_decision_task', 'execution.new_decision',
+                            'execution.new_activity_task', 'execution.new_activity_task', 'execution.terminated');
+
+        $actualEventNames = $execution->getHistory()->map(function(Event $event) {
+            return $event->getName();
+        })->toArray();
+        $this->assertEquals($eventNames, $actualEventNames);
+
+        $this->assertCount(3, $execution->getTasks());
+        $this->assertNull($execution->getTasks()->get(2)->getStartedAt(), $this->getDebugInfo());
+        $this->assertNull($execution->getTasks()->get(2)->getMachineIdentifier());
+        $this->assertNull($execution->getTasks()->get(2)->getWorkerIdentifier());
     }
 
     public static function setUpBeforeClass()

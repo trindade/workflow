@@ -4,7 +4,7 @@ namespace Scrutinizer\Workflow\RabbitMq\Transport;
 
 use JMS\Serializer\Annotation as Serializer;
 
-class StartActvity
+class StartActivity
 {
     /** @Serializer\Type("string") */
     public $executionId;
@@ -13,7 +13,7 @@ class StartActvity
     public $taskId;
 
     /** @Serializer\Type("string") */
-    public $machineIdentfier;
+    public $machineIdentifier;
 
     /** @Serializer\Type("string") */
     public $workerIdentifier;

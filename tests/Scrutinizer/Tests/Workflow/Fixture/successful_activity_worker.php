@@ -10,6 +10,8 @@ $worker = new \Scrutinizer\Workflow\Client\Activity\SimpleCallableWorker(
     $_SERVER['argv'][1],
     function ($input) {
         return $input;
-    }
+    },
+    'machine',
+    'worker'
 );
 $worker->run();

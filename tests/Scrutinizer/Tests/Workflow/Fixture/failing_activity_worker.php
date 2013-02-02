@@ -10,6 +10,8 @@ $worker = new \Scrutinizer\Workflow\Client\Activity\SimpleCallableWorker(
     $_SERVER['argv'][1],
     function ($input) {
         throw new \Exception('Activity failed.');
-    }
+    },
+    'machine',
+    'worker'
 );
 $worker->run();
