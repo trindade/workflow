@@ -29,6 +29,7 @@ class ActivityTask extends AbstractActivityTask
     const STATE_OPEN = 'open';
     const STATE_FAILED = 'failed';
     const STATE_SUCCEEDED = 'succeeded';
+    const STATE_TIMED_OUT = 'timed_out';
 
     /** @ORM\ManyToOne(targetEntity = "ActivityType") @Serializer\Exclude */
     private $activityType;
@@ -48,18 +49,37 @@ class ActivityTask extends AbstractActivityTask
     /** @ORM\Column(type = "json_array", nullable = true) */
     private $failureException;
 
+    /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
+    private $maxRuntime;
+
+    /** @ORM\Column(type = "datetime", nullable = true) */
+    private $startedAt;
+
+    /** @ORM\Column(type = "string", length = 50) */
+    private $machineIdentifier;
+
+    /** @ORM\Column(type = "string", length = 50) */
+    private $workerIdentifier;
+
     /**
      * @param WorkflowExecution $execution
      * @param ActivityType $activityType
      * @param string $input
      * @param array $control
+     * @param integer|null $maxRuntime
      */
-    public function __construct(WorkflowExecution $execution, ActivityType $activityType, $input, array $control = array())
+    public function __construct(WorkflowExecution $execution, ActivityType $activityType, $input, array $control = array(), $maxRuntime = null)
     {
         parent::__construct($execution, $control);
 
         $this->activityType = $activityType;
         $this->input = $input;
+        $this->maxRuntime = $maxRuntime ?: $activityType->getMaxRuntime();
+    }
+
+    public function getMaxRuntime()
+    {
+        return $this->maxRuntime;
     }
 
     public function getActivityType()
@@ -115,6 +135,28 @@ class ActivityTask extends AbstractActivityTask
         return $this->failureException;
     }
 
+    public function getMachineIdentifier()
+    {
+        return $this->machineIdentifier;
+    }
+
+    public function getWorkerIdentifier()
+    {
+        return $this->workerIdentifier;
+    }
+
+    public function getStartedAt()
+    {
+        return $this->startedAt;
+    }
+
+    public function setExecutionDetails($machineIdentifier, $workerIdentifier)
+    {
+        $this->machineIdentifier = $machineIdentifier;
+        $this->workerIdentifier = $workerIdentifier;
+        $this->startedAt = new \DateTime();
+    }
+
     public function setFailureDetails($reason, array $exception = null)
     {
         $this->state = self::STATE_FAILED;
@@ -128,6 +170,12 @@ class ActivityTask extends AbstractActivityTask
         $this->state = self::STATE_SUCCEEDED;
         $this->setFinished();
         $this->result = $result;
+    }
+
+    public function setTimedOut()
+    {
+        $this->state = self::STATE_TIMED_OUT;
+        $this->setFinished();
     }
 
     public function __toString()

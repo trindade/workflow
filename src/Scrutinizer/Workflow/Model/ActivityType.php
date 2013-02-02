@@ -36,10 +36,14 @@ class ActivityType
     /** @ORM\Column(type = "string", length = 50) */
     private $queueName;
 
-    public function __construct($name, $queueName)
+    /** @ORM\Column(type = "integer", options = {"unsigned": true}) */
+    private $maxRuntime;
+
+    public function __construct($name, $queueName, $maxRuntime = 3600)
     {
         $this->name = $name;
         $this->queueName = $queueName;
+        $this->maxRuntime = 3600;
     }
 
     public function getId()
@@ -60,5 +64,10 @@ class ActivityType
     public function setQueueName($name)
     {
         $this->queueName = $name;
+    }
+
+    public function getMaxRuntime()
+    {
+        return $this->maxRuntime;
     }
 }

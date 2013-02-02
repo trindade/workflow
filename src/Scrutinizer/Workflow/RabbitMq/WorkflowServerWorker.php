@@ -90,6 +90,7 @@ class WorkflowServerWorker
             'workflow_activity_result' => 'consumeActivityResult',
             'workflow_type' => 'consumeWorkflowType',
             'workflow_activity_type' => 'consumeActivityType',
+            'workflow_activity_start' => 'consumeActivityStart',
             'workflow_adoption_request' => 'consumeAdoptionRequest', // Internal Queue.
         );
         foreach ($queuesToMethods as $queueName => $methodName) {
@@ -306,6 +307,39 @@ class WorkflowServerWorker
                 throw new \RuntimeException(sprintf('The workflow "%s" is already declared with the decider queue "%s".', $workflow->getDeciderQueueName()));
             }
         }
+    }
+
+    private function consumeActivityStart(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
+    {
+        /** @var $startActivity Transport\StartActvity */
+        $startActivity = $this->deserialize($message->body, 'Scrutinizer\Workflow\RabbitMq\Transport\StartActivity');
+
+        /** @var $executionRepo WorkflowExecutionRepository */
+        $executionRepo = $em->getRepository('Workflow:WorkflowExecution');
+        $execution = $executionRepo->getByIdExclusive($startActivity->executionId);
+        $builder->setWorkflowExecution($execution);
+
+        if ($execution->isClosed()) {
+            $builder->setResponseData(array(
+                'action' => 'cancel',
+            ));
+
+            return;
+        }
+
+        /** @var $activityTask ActivityTask */
+        $activityTask = $execution->getActivityTaskWithId($startActivity->taskId)->get();
+        $activityTask->setExecutionDetails($startActivity->machineIdentfier, $startActivity->workerIdentifier);
+        $em->persist($execution);
+        $em->flush();
+
+        $this->dispatchEvent($builder, $execution, 'execution.activity_started', array(
+            'task_id' => $startActivity->taskId,
+        ));
+
+        $builder->setResponseData(array(
+            'action' => 'start',
+        ));
     }
 
     private function consumeActivityType(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
@@ -700,6 +734,79 @@ class WorkflowServerWorker
     }
 
     public function collectGarbage()
+    {
+        $this->collectTimedOutExecutions();
+        $this->collectTimedOutActivityTasks();
+    }
+
+    private function collectTimedOutActivityTasks()
+    {
+        /** @var $em EntityManager */
+        $em = $this->registry->getManager();
+        $con = $em->getConnection();
+
+        switch ($dbPlatform = $con->getDatabasePlatform()->getName()) {
+            case 'mysql':
+                $sql = 'SELECT id, workflowExecution_id FROM workflow_tasks t
+                        WHERE
+                            t.type = "activity"
+                            AND
+                            t.state = "'.ActivityTask::STATE_OPEN.'"
+                            AND
+                            DATE_ADD(t.createdAt, INTERVAL t.maxRuntime SECOND) < :now
+                        ';
+                break;
+
+            default:
+                throw new \LogicException(sprintf('Unsupported database platform "%s".', $dbPlatform));
+        }
+
+        $rs = $con->executeQuery($sql, array('now' => new \DateTime()), array('now' => \Doctrine\DBAL\Types\Type::DATETIME));
+
+        /** @var $executionRepo WorkflowExecutionRepository */
+        $executionRepo = $em->getRepository('Workflow:WorkflowExecution');
+
+        foreach ($rs->fetchAll(\PDO::FETCH_NUM) as $row) {
+            list($taskId, $executionId) = $row;
+
+            $con->exec("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+            $con->beginTransaction();
+            try {
+                $builder = new ResponseBuilder();
+                $execution = $executionRepo->getByIdExclusive($executionId);
+
+                /** @var $activityTask ActivityTask */
+                $activityTask = $execution->getActivityTaskWithId($taskId)->get();
+                $activityTask->setTimedOut();
+
+                $decisionTask = $execution->scheduleDecisionTask();
+                $em->persist($execution);
+                $em->flush();
+
+                $this->dispatchEvent($builder, $execution, 'execution.new_activity_result', array(
+                    'status' => 'timed_out',
+                    'task_id' => (string) $activityTask->getId(),
+                ));
+
+                if (null !== $decisionTask) {
+                    $this->dispatchEvent($builder, $execution, 'execution.new_decision_task', array('task_id' => (string) $decisionTask->getId()));
+                    $this->dispatchDecisionTask($builder, $execution, $decisionTask);
+                }
+
+                $con->commit();
+
+                foreach ($builder->getMessages() as $message) {
+                    call_user_func_array(array($this->channel, 'basic_publish'), $message);
+                }
+            } catch (\Exception $ex) {
+                $con->rollBack();
+
+                throw $ex;
+            }
+        }
+    }
+
+    private function collectTimedOutExecutions()
     {
         /** @var $em EntityManager */
         $em = $this->registry->getManager();
