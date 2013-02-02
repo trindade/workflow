@@ -753,7 +753,9 @@ class WorkflowServerWorker
                             AND
                             t.state = "'.ActivityTask::STATE_OPEN.'"
                             AND
-                            DATE_ADD(t.createdAt, INTERVAL t.maxRuntime SECOND) < :now
+                            t.startedAt IS NOT NULL
+                            AND
+                            DATE_ADD(t.startedAt, INTERVAL t.maxRuntime SECOND) < :now
                         ';
                 break;
 
