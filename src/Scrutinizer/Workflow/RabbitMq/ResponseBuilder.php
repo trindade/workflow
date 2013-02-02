@@ -36,7 +36,7 @@ class ResponseBuilder
         return $this->serializerGroups;
     }
 
-    public function setResponseData(array $data)
+    public function setResponseData($data)
     {
         $this->responseData = $data;
 

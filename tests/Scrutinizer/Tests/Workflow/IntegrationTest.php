@@ -327,6 +327,21 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         $this->assertCount(4, $adoptingExecution->getTasks(), $this->getDebugInfo());
     }
 
+    /**
+     * @group details
+     */
+    public function testExecutionDetails()
+    {
+        $rs = $this->client->startExecution('testflow', 'foo');
+
+        $details = $this->client->getExecutionDetails($rs['execution_id']);
+        $this->assertEquals($rs['execution_id'], $details->id);
+        $this->assertTrue($details->isOpen());
+        $this->assertCount(1, $details->tasks);
+        $this->assertEquals('foo', $details->input);
+        $this->assertCount(2, $details->history);
+    }
+
     public static function setUpBeforeClass()
     {
         $em = (new SimpleRegistry($_SERVER['CONFIG']))->getManager();

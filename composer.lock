@@ -711,18 +711,18 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/videlalvaro/php-amqplib.git",
-                "reference": "v2.0.1"
+                "reference": "66286441c1dfca65e3ce2dff6ff3d5706fe1c228"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://github.com/videlalvaro/php-amqplib/archive/v2.0.1.zip",
-                "reference": "v2.0.1",
+                "url": "https://api.github.com/repos/videlalvaro/php-amqplib/zipball/66286441c1dfca65e3ce2dff6ff3d5706fe1c228",
+                "reference": "66286441c1dfca65e3ce2dff6ff3d5706fe1c228",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3.0"
             },
-            "time": "2013-01-27 13:16:40",
+            "time": "2013-02-01 19:27:41",
             "type": "library",
             "autoload": {
                 "psr-0": {
@@ -809,7 +809,7 @@
             "source": {
                 "type": "git",
                 "url": "git://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "9ada0c19f6acf1b5c29142a12eb349e0f4c10562"
+                "reference": "44569a1615dbf9ef2824d8ce4f1d1a54249d20de"
             },
             "require": {
                 "videlalvaro/php-amqplib": "dev-master",
@@ -817,7 +817,7 @@
                 "phpcollection/phpcollection": "0.2.*@dev",
                 "scrutinizer/rabbitmq": "dev-master"
             },
-            "time": "2013-01-28 13:26:29",
+            "time": "2013-02-02 10:21:57",
             "type": "library",
             "autoload": {
                 "psr-0": {

@@ -85,6 +85,7 @@ class WorkflowServerWorker
             'workflow_execution' => 'consumeExecution',
             'workflow_execution_termination' => 'consumeExecutionTermination',
             'workflow_execution_listing' => 'consumeExecutionListing',
+            'workflow_execution_details' => 'consumeExecutionDetails',
             'workflow_decision' => 'consumeDecision',
             'workflow_activity_result' => 'consumeActivityResult',
             'workflow_type' => 'consumeWorkflowType',
@@ -186,6 +187,25 @@ class WorkflowServerWorker
                 $this->channel->basic_nack($message->get('delivery_tag'));
             }
         };
+    }
+
+    private function consumeExecutionDetails(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
+    {
+        $input = json_decode($message->body, true);
+
+        if ( ! isset($input['execution_id'])) {
+            throw new \InvalidArgumentException('"execution_id" attribute was not set.');
+        }
+
+        $execution = $em->find('Workflow:WorkflowExecution', $input['execution_id']);
+        if (null === $execution) {
+            throw new \InvalidArgumentException(sprintf('There is no execution with id "%s".', $input['execution_id']));
+        }
+
+        $builder
+            ->setSerializerGroups(array('Default', 'Details'))
+            ->setResponseData($execution)
+        ;
     }
 
     private function consumeExecutionListing(AMQPMessage $message, ResponseBuilder $builder, EntityManager $em)
