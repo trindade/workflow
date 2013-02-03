@@ -494,7 +494,9 @@ class WorkflowServerWorker
         $builder->setWorkflowExecution($execution);
 
         /** @var $decisionTask DecisionTask */
-        $decisionTask = $execution->getOpenDecisionTask()->get();
+        $decisionTask = $execution->getOpenDecisionTask()->getOrThrow(
+            new \RuntimeException(sprintf('There is no open decision task for %s.', $execution))
+        );
         $decisionTask->close();
 
         $this->dispatchEvent($builder, $execution, 'execution.new_decision', array('nb_decisions' => count($decisionResponse->decisions), 'task_id' => (string) $decisionTask->getId()));
