@@ -1,11 +1,9 @@
 {
     "name": "scrutinizer/workflow",
     "description": "Library for managing distributed workflows.",
+    "license": "Apache2",
 
-    "repositories": [
-        {"type": "git", "url": "git://github.com/scrutinizer-ci/rabbitmq"},
-        {"type": "git", "url": "git://github.com/scrutinizer-ci/workflow-php-client.git"}
-    ],
+    "minimum-stability": "dev",
 
     "require": {
         "doctrine/orm": "*",

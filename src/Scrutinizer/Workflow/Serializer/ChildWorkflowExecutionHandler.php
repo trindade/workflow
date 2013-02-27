@@ -6,6 +6,7 @@ use JMS\Serializer\GraphNavigator;
 use JMS\Serializer\Handler\SubscribingHandlerInterface;
 use JMS\Serializer\JsonSerializationVisitor;
 use JMS\Serializer\NavigatorContext;
+use JMS\Serializer\SerializationContext;
 use Scrutinizer\Workflow\Model\WorkflowExecution;
 
 class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
@@ -24,7 +25,7 @@ class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
         );
     }
 
-    public function serializeToJson(JsonSerializationVisitor $visitor, WorkflowExecution $execution, array $type, NavigatorContext $context)
+    public function serializeToJson(JsonSerializationVisitor $visitor, WorkflowExecution $execution, array $type, SerializationContext $context)
     {
         if ($this->depth > 0) {
             return array(
@@ -37,7 +38,7 @@ class ChildWorkflowExecutionHandler implements SubscribingHandlerInterface
 
         $this->depth += 1;
         $context->stopVisiting($execution);
-        $rs = $visitor->getNavigator()->accept($execution, null, $visitor);
+        $rs = $context->accept($execution, null);
         $context->startVisiting($execution);
         $this->depth -= 1;
 

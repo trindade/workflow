@@ -25,7 +25,9 @@ use Doctrine\DBAL\Types\DateTimeTzType;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query\Expr\Join;
+use JMS\Serializer\DeserializationContext;
 use JMS\Serializer\Exclusion\GroupsExclusionStrategy;
+use JMS\Serializer\SerializationContext;
 use JMS\Serializer\Serializer;
 use PhpAmqpLib\Connection\AMQPConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -872,15 +874,16 @@ class WorkflowServerWorker
 
     private function serialize($data, array $groups = array())
     {
-        $this->serializer->setExclusionStrategy(empty($groups) ? null : new GroupsExclusionStrategy($groups));
+        $context = new SerializationContext();
+        if ( ! empty($groups)) {
+            $context->setGroups($groups);
+        }
 
-        return $this->serializer->serialize($data, 'json');
+        return $this->serializer->serialize($data, 'json', $context);
     }
 
     private function deserialize($data, $type)
     {
-        $this->serializer->setExclusionStrategy(null);
-
         return $this->serializer->deserialize($data, $type, 'json');
     }
 
