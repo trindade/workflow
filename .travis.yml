@@ -1,7 +1,10 @@
 language: php
 
+php:
+  - 5.4
+
 before_script:
-  - sudo echo "deb http://www.rabbitmq.com/debian/ testing main" >> /etc/apt/sources.list
+  - echo "deb http://www.rabbitmq.com/debian/ testing main" | sudo tee -a /etc/apt/sources.list
   - curl -sS https://www.rabbitmq.com/rabbitmq-signing-key-public.asc | sudo apt-key add -
   - sudo apt-get update
   - sudo apt-get install rabbitmq-server
