@@ -6,6 +6,6 @@ php:
 before_script:
   - sudo service rabbitmq-server start
   - sudo service mysql start
-  - sed -i "s/env: prod/env: test/" config.yml.dist
+  - 'sed -i "s/env: prod/env: test/" config.yml.dist'
   - curl -s https://getcomposer.org/installer | php
   - php composer.phar install --dev
