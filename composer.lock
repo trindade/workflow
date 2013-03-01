@@ -454,7 +454,7 @@
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/doctrine/migrations",
+                "url": "https://github.com/doctrine/migrations.git",
                 "reference": "e1f6efcd94993b493de5c6a413cbc327ea9c0caa"
             },
             "dist": {
@@ -480,7 +480,7 @@
                     "Doctrine\\DBAL\\Migrations": "lib"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "notification-url": "http://packagist.org/downloads/",
             "license": [
                 "LGPL"
             ],
@@ -763,7 +763,7 @@
                     "Monolog": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "notification-url": "http://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -902,7 +902,7 @@
                     "Psr\\Log\\": ""
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "notification-url": "http://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1270,12 +1270,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/scrutinizer-ci/workflow-php-client.git",
-                "reference": "4a07e087e2126da071aa0df1bf7a3300c9010dde"
+                "reference": "bcfe1cda77088c921d189811fd831adab06e9a61"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/scrutinizer-ci/workflow-php-client/zipball/4a07e087e2126da071aa0df1bf7a3300c9010dde",
-                "reference": "4a07e087e2126da071aa0df1bf7a3300c9010dde",
+                "url": "https://api.github.com/repos/scrutinizer-ci/workflow-php-client/zipball/bcfe1cda77088c921d189811fd831adab06e9a61",
+                "reference": "bcfe1cda77088c921d189811fd831adab06e9a61",
                 "shasum": ""
             },
             "require": {
@@ -1292,7 +1292,7 @@
                 }
             },
             "notification-url": "http://packagist.org/downloads/",
-            "time": "2013-02-27 22:50:27"
+            "time": "2013-03-01 12:09:05"
         },
         {
             "name": "symfony/event-dispatcher",
