@@ -454,7 +454,7 @@
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/doctrine/migrations.git",
+                "url": "https://github.com/doctrine/migrations",
                 "reference": "e1f6efcd94993b493de5c6a413cbc327ea9c0caa"
             },
             "dist": {
@@ -480,7 +480,7 @@
                     "Doctrine\\DBAL\\Migrations": "lib"
                 }
             },
-            "notification-url": "http://packagist.org/downloads/",
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "LGPL"
             ],
@@ -509,12 +509,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/doctrine2.git",
-                "reference": "e5779a0756306c7ae34536b9adaf964c00465bb6"
+                "reference": "2372a85d9fff9f55197bc1b4f434e7cee469706b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/doctrine2/zipball/e5779a0756306c7ae34536b9adaf964c00465bb6",
-                "reference": "e5779a0756306c7ae34536b9adaf964c00465bb6",
+                "url": "https://api.github.com/repos/doctrine/doctrine2/zipball/2372a85d9fff9f55197bc1b4f434e7cee469706b",
+                "reference": "2372a85d9fff9f55197bc1b4f434e7cee469706b",
                 "shasum": ""
             },
             "require": {
@@ -571,7 +571,7 @@
                 "database",
                 "orm"
             ],
-            "time": "2013-02-27 11:47:02"
+            "time": "2013-03-01 00:02:20"
         },
         {
             "name": "jms/metadata",
@@ -666,12 +666,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/schmittjoh/serializer.git",
-                "reference": "b5205af241c76f1e5142bae0f3e8f3895fb66d4f"
+                "reference": "0aded9426d08c920e299c302914f702fad6f8ee6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/schmittjoh/serializer/zipball/b5205af241c76f1e5142bae0f3e8f3895fb66d4f",
-                "reference": "b5205af241c76f1e5142bae0f3e8f3895fb66d4f",
+                "url": "https://api.github.com/repos/schmittjoh/serializer/zipball/0aded9426d08c920e299c302914f702fad6f8ee6",
+                "reference": "0aded9426d08c920e299c302914f702fad6f8ee6",
                 "shasum": ""
             },
             "require": {
@@ -712,7 +712,7 @@
                 {
                     "name": "Johannes M. Schmitt",
                     "email": "schmittjoh@gmail.com",
-                    "homepage": "https://github.com/schmittjoh",
+                    "homepage": "http://jmsyst.com",
                     "role": "Developer of wrapped JMSSerializerBundle"
                 }
             ],
@@ -725,7 +725,7 @@
                 "serialization",
                 "xml"
             ],
-            "time": "2013-02-27 22:16:29"
+            "time": "2013-03-01 10:16:05"
         },
         {
             "name": "monolog/monolog",
@@ -763,7 +763,7 @@
                     "Monolog": "src/"
                 }
             },
-            "notification-url": "http://packagist.org/downloads/",
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -902,7 +902,7 @@
                     "Psr\\Log\\": ""
                 }
             },
-            "notification-url": "http://packagist.org/downloads/",
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -959,12 +959,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/Console.git",
-                "reference": "f65e34d058f0990a724f78e8d091dc0a20e439ac"
+                "reference": "fae82dad073a491b91a2ad6cda2ef5d8b19a5152"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Console/zipball/f65e34d058f0990a724f78e8d091dc0a20e439ac",
-                "reference": "f65e34d058f0990a724f78e8d091dc0a20e439ac",
+                "url": "https://api.github.com/repos/symfony/Console/zipball/fae82dad073a491b91a2ad6cda2ef5d8b19a5152",
+                "reference": "fae82dad073a491b91a2ad6cda2ef5d8b19a5152",
                 "shasum": ""
             },
             "require": {
@@ -997,7 +997,7 @@
             ],
             "description": "Symfony Console Component",
             "homepage": "http://symfony.com",
-            "time": "2013-01-31 21:39:01"
+            "time": "2013-03-01 06:43:27"
         },
         {
             "name": "symfony/yaml",
@@ -1088,7 +1088,314 @@
             "time": "2013-02-13 19:43:51"
         }
     ],
-    "packages-dev": null,
+    "packages-dev": [
+        {
+            "name": "doctrine/data-fixtures",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/doctrine/data-fixtures.git",
+                "reference": "689bc2ae2a41dff1107d9d50e2daa4c349222869"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/doctrine/data-fixtures/zipball/689bc2ae2a41dff1107d9d50e2daa4c349222869",
+                "reference": "689bc2ae2a41dff1107d9d50e2daa4c349222869",
+                "shasum": ""
+            },
+            "require": {
+                "doctrine/common": ">=2.2,<2.5-dev",
+                "php": ">=5.3.2"
+            },
+            "require-dev": {
+                "doctrine/orm": ">=2.2,<2.5-dev"
+            },
+            "suggest": {
+                "doctrine/mongodb-odm": "For loading MongoDB ODM fixtures",
+                "doctrine/orm": "For loading ORM fixtures",
+                "doctrine/phpcr-odm": "For loading PHPCR ODM fixtures"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Doctrine\\Common\\DataFixtures": "lib/"
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jonathan Wage",
+                    "email": "jonwage@gmail.com",
+                    "homepage": "http://www.jwage.com/"
+                }
+            ],
+            "description": "Data Fixtures for all Doctrine Object Managers",
+            "homepage": "http://www.doctrine-project.org",
+            "keywords": [
+                "database"
+            ],
+            "time": "2013-02-12 02:52:36"
+        },
+        {
+            "name": "guzzle/guzzle",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/guzzle/guzzle.git",
+                "reference": "8d68969a8b22ec5175c4361bdc4fec9790592247"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/8d68969a8b22ec5175c4361bdc4fec9790592247",
+                "reference": "8d68969a8b22ec5175c4361bdc4fec9790592247",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "php": ">=5.3.2",
+                "symfony/event-dispatcher": ">=2.1"
+            },
+            "replace": {
+                "guzzle/batch": "self.version",
+                "guzzle/cache": "self.version",
+                "guzzle/common": "self.version",
+                "guzzle/http": "self.version",
+                "guzzle/inflection": "self.version",
+                "guzzle/iterator": "self.version",
+                "guzzle/log": "self.version",
+                "guzzle/parser": "self.version",
+                "guzzle/plugin": "self.version",
+                "guzzle/plugin-async": "self.version",
+                "guzzle/plugin-backoff": "self.version",
+                "guzzle/plugin-cache": "self.version",
+                "guzzle/plugin-cookie": "self.version",
+                "guzzle/plugin-curlauth": "self.version",
+                "guzzle/plugin-history": "self.version",
+                "guzzle/plugin-log": "self.version",
+                "guzzle/plugin-md5": "self.version",
+                "guzzle/plugin-mock": "self.version",
+                "guzzle/plugin-oauth": "self.version",
+                "guzzle/service": "self.version",
+                "guzzle/stream": "self.version"
+            },
+            "require-dev": {
+                "doctrine/cache": "*",
+                "monolog/monolog": "1.*",
+                "phpunit/phpunit": "3.7.*",
+                "symfony/class-loader": "*",
+                "zend/zend-cache1": "1.12",
+                "zend/zend-log1": "1.12",
+                "zendframework/zend-cache": "2.0.*",
+                "zendframework/zend-log": "2.0.*"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.2-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Guzzle\\Tests": "tests/",
+                    "Guzzle": "src/"
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Dowling",
+                    "email": "mtdowling@gmail.com",
+                    "homepage": "https://github.com/mtdowling"
+                },
+                {
+                    "name": "Guzzle Community",
+                    "homepage": "https://github.com/guzzle/guzzle/contributors"
+                }
+            ],
+            "description": "Guzzle is a PHP HTTP client library and framework for building RESTful web service clients",
+            "homepage": "http://guzzlephp.org/",
+            "keywords": [
+                "client",
+                "curl",
+                "framework",
+                "http",
+                "http client",
+                "rest",
+                "web service"
+            ],
+            "time": "2013-03-01 06:25:58"
+        },
+        {
+            "name": "scrutinizer/error-reporter",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/scrutinizer-ci/php-error-reporter.git",
+                "reference": "4eb683e90c1db1bebc524fbbe60613096d996fc2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/scrutinizer-ci/php-error-reporter/zipball/4eb683e90c1db1bebc524fbbe60613096d996fc2",
+                "reference": "4eb683e90c1db1bebc524fbbe60613096d996fc2",
+                "shasum": ""
+            },
+            "require": {
+                "guzzle/guzzle": "3.*",
+                "psr/log": "1.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Scrutinizer\\": "src/"
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "description": "Reports exceptions to a processing server for further inspection.",
+            "time": "2013-02-26 22:56:10"
+        },
+        {
+            "name": "scrutinizer/workflow-client",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/scrutinizer-ci/workflow-php-client.git",
+                "reference": "4a07e087e2126da071aa0df1bf7a3300c9010dde"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/scrutinizer-ci/workflow-php-client/zipball/4a07e087e2126da071aa0df1bf7a3300c9010dde",
+                "reference": "4a07e087e2126da071aa0df1bf7a3300c9010dde",
+                "shasum": ""
+            },
+            "require": {
+                "phpcollection/phpcollection": "0.2.*@dev",
+                "phpoption/phpoption": "1.*",
+                "scrutinizer/error-reporter": "dev-master",
+                "scrutinizer/rabbitmq": "dev-master",
+                "videlalvaro/php-amqplib": "dev-master"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Scrutinizer": "src/"
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "time": "2013-02-27 22:50:27"
+        },
+        {
+            "name": "symfony/event-dispatcher",
+            "version": "dev-master",
+            "target-dir": "Symfony/Component/EventDispatcher",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/EventDispatcher.git",
+                "reference": "2e1fce7bb3ea06d9e42756f1dd3edf966420c755"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/2e1fce7bb3ea06d9e42756f1dd3edf966420c755",
+                "reference": "2e1fce7bb3ea06d9e42756f1dd3edf966420c755",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "require-dev": {
+                "symfony/dependency-injection": ">=2.0,<3.0"
+            },
+            "suggest": {
+                "symfony/dependency-injection": "2.2.*",
+                "symfony/http-kernel": "2.2.*"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.3-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\EventDispatcher\\": ""
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony EventDispatcher Component",
+            "homepage": "http://symfony.com",
+            "time": "2013-02-11 11:27:01"
+        },
+        {
+            "name": "symfony/process",
+            "version": "dev-master",
+            "target-dir": "Symfony/Component/Process",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/Process.git",
+                "reference": "6ebe4ba544cfc0dd25bfe49402da4d5267ee1b43"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/Process/zipball/6ebe4ba544cfc0dd25bfe49402da4d5267ee1b43",
+                "reference": "6ebe4ba544cfc0dd25bfe49402da4d5267ee1b43",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.3-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Symfony\\Component\\Process\\": ""
+                }
+            },
+            "notification-url": "http://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "http://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony Process Component",
+            "homepage": "http://symfony.com",
+            "time": "2013-02-18 21:28:20"
+        }
+    ],
     "aliases": [
 
     ],
