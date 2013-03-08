@@ -266,7 +266,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         /** @var $execution WorkflowExecution */
         $this->assertNotNull($execution = $this->executionRepo->findOneBy(array('id' => 1)));
 
-        $this->assertTrueWithin(40, function() use ($execution) {
+        $this->assertTrueWithin(60, function() use ($execution) {
             $this->em->refresh($execution);
 
             return $execution->isClosed();
