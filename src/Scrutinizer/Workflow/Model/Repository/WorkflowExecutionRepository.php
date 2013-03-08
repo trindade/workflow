@@ -77,6 +77,50 @@ class WorkflowExecutionRepository extends EntityRepository
     }
 
     /**
+     * Removes all executions older than the specified retention period.
+     *
+     * This method does not clean-up executions which still have parent methods.
+     *
+     * Also, this method deletes a maximum of 1000 execution in one invocation. If there are still more executions
+     * which can be deleted this method will return "false"; otherwise, "true" will be returned.
+     *
+     * @param string $retentionPeriod
+     *
+     * @return boolean
+     */
+    public function removeExpiredExecutions($retentionPeriod = '7 days')
+    {
+        $retentionTime = (new \DateTime)->modify('-'.$retentionPeriod);
+
+        $con = $this->_em->getConnection();
+        $executionIds = $con->executeQuery(
+            "SELECT e.id FROM workflow_executions e
+                WHERE e.finishedAt IS NOT NULL AND e.finishedAt < :retentionTime
+                      AND NOT EXISTS (SELECT t.id FROM workflow_tasks t WHERE t.childWorkflowExecution_id = e.id LIMIT 1)
+                LIMIT 1000
+            ",
+            array('retentionTime' => $retentionTime),
+            array('retentionTime' => 'datetime')
+        )->fetchAll(\PDO::FETCH_COLUMN);
+
+        $i = 0;
+        foreach ($executionIds as $executionId) {
+            $con->transactional(function(Connection $con) use ($executionId) {
+                $con->executeQuery("DELETE FROM workflow_tasks WHERE workflowExecution_id = :id", array('id' => $executionId));
+                $con->executeQuery("DELETE FROM workflow_events WHERE workflowExecution_id = :id", array('id' => $executionId));
+                $con->executeQuery("DELETE FROM workflow_execution_tags WHERE execution_id = :id", array('id' => $executionId));
+                $con->executeQuery("DELETE FROM workflow_executions WHERE id = :id", array('id' => $executionId));
+            });
+            $i += 1;
+        }
+
+        // Theoretically, it could be the case that there were exactly 1000 invocations and which we now cleaned up.
+        // However, it's safe to assume that this will rarely happen, and anyway making this approximation here is
+        // "good enough" for practical purposes.
+        return $i < 1000;
+    }
+
+    /**
      * Finds the tree roots from which the given id is reachable.
      *
      * We will lock all tree roots for modifying the given
