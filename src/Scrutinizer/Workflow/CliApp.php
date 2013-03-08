@@ -18,18 +18,14 @@
 
 namespace Scrutinizer\Workflow;
 
-use Doctrine\Common\Annotations\AnnotationReader;
-use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Migrations\Configuration\Configuration;
 use Doctrine\DBAL\Migrations\Tools\Console\Command\AbstractCommand;
-use Doctrine\ORM\Mapping\Driver\AnnotationDriver;
 use Doctrine\ORM\Tools\Console\Helper\EntityManagerHelper;
 use Scrutinizer\Workflow\Command\CleanUpCommand;
 use Scrutinizer\Workflow\Command\GarbageCollectCommand;
 use Scrutinizer\Workflow\Command\ServerRunCommand;
 use Scrutinizer\Workflow\Doctrine\SimpleRegistry;
 use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Yaml\Yaml;
 
 class CliApp extends Application
