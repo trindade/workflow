@@ -214,7 +214,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
             $this->assertNotNull($executions[$i] = $this->executionRepo->findOneBy(array('id' => $i)));
         }
 
-        $this->assertTrueWithin(20, function() use ($executions) {
+        $this->assertTrueWithin(30, function() use ($executions) {
             foreach ($executions as $execution) {
                 $this->em->refresh($execution);
 
@@ -266,7 +266,7 @@ class IntegrationTest extends \PHPUnit_Framework_TestCase
         /** @var $execution WorkflowExecution */
         $this->assertNotNull($execution = $this->executionRepo->findOneBy(array('id' => 1)));
 
-        $this->assertTrueWithin(20, function() use ($execution) {
+        $this->assertTrueWithin(40, function() use ($execution) {
             $this->em->refresh($execution);
 
             return $execution->isClosed();
