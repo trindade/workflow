@@ -137,11 +137,16 @@ class WorkflowExecutionRepository extends EntityRepository
         // This ensures that there are no read operations when we are modifying parent relations in an adoption task.
         $con->executeQuery("SELECT id FROM workflow_execution_lock ".$con->getDatabasePlatform()->getReadLockSQL());
 
+        $queriedIds = array();
         $parentIds = array($id);
         while ($parentId = array_shift($parentIds)) {
             if (in_array($parentId, $topMostIds, true)) {
                 continue;
             }
+            if (in_array($parentId, $queriedIds, true)) {
+                continue;
+            }
+            $queriedIds[] = $parentId;
 
             $newParentIds = $con->executeQuery("SELECT workflowExecution_id FROM workflow_tasks WHERE childWorkflowExecution_id = :id", array(
                 'id' => $parentId,
